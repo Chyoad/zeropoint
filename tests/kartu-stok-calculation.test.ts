@@ -627,6 +627,29 @@ describe('Modul Buku Besar Kartu Stok & Kalkulasi Moving Average', () => {
       expect(opsi.daftarProduk[0]).toHaveProperty('id')
       expect(opsi.daftarProduk[0]).toHaveProperty('nama')
     })
+    it('harus mengembalikan mutasi semua cabang saat cabang_id adalah "all" atau undefined', async () => {
+      const resAll = await ambilBukuBesarKartuStok({ cabang_id: 'all' })
+      const resUndefined = await ambilBukuBesarKartuStok({ cabang_id: undefined })
+
+      expect(resAll.data.length).toBe(resUndefined.data.length)
+
+      const cabangIds = new Set(resAll.data.map((d) => d.cabang_id))
+      expect(cabangIds.size).toBeGreaterThan(1)
+    })
+
+    it('harus menjaga konsistensi sisa kuantitas dan HPP saat filter jenis_mutasi aktif (tidak menghitung dari 0)', async () => {
+      const resPenjualan = await ambilBukuBesarKartuStok({
+        jenis_mutasi: 'keluar_penjualan',
+      })
+
+      expect(resPenjualan.data.length).toBeGreaterThan(0)
+      for (const item of resPenjualan.data) {
+        expect(item.jenis_mutasi).toBe('keluar_penjualan')
+        // Sisa kuantitas tidak boleh negatif dan HPP harus positif (tidak dihitung ulang dari 0)
+        expect(item.sisa_kuantitas).toBeGreaterThan(0)
+        expect(item.hpp_rata_rata).toBeGreaterThan(0)
+      }
+    })
   })
 
   describe('4. Ekspor File CSV (buatKontenCSVKartuStok & formatBarisCSV)', () => {
@@ -662,9 +685,16 @@ describe('Modul Buku Besar Kartu Stok & Kalkulasi Moving Average', () => {
   })
 
   describe('5. Audit Zero Lucide-React & Konsistensi UI', () => {
+    it('harus memformat tanggal waktu Indonesia secara konsisten dalam zona waktu WIB (Asia/Jakarta)', async () => {
+      const { formatTanggalWaktuIndonesia } = await import('@/lib/utils')
+      const formatted = formatTanggalWaktuIndonesia('2026-10-13T08:30:00.000Z')
+      expect(formatted).toBe('13/10/2026 15:30')
+    })
+
     it('harus memastikan tidak ada dependensi atau impor lucide-react pada modul kartu stok dan seluruh komponen terkait', () => {
       const filesToCheck = [
         path.join(process.cwd(), 'src/server/queries/kartu-stok.ts'),
+        path.join(process.cwd(), 'src/lib/kartu-stok-csv.ts'),
         path.join(process.cwd(), 'src/components/kartu-stok/kartu-stok-filter.tsx'),
         path.join(process.cwd(), 'src/components/kartu-stok/kartu-stok-table.tsx'),
         path.join(process.cwd(), 'src/app/(dashboard)/kartu-stok/page.tsx'),
@@ -678,7 +708,9 @@ describe('Modul Buku Besar Kartu Stok & Kalkulasi Moving Average', () => {
           `File ${filePath} tidak boleh mengimpor lucide-react`
         ).toBe(false)
         expect(
-          content.includes('@hugeicons/react') || content.includes('@hugeicons/core-free-icons') || !content.includes('Icon'),
+          content.includes('@hugeicons/react') ||
+            content.includes('@hugeicons/core-free-icons') ||
+            !content.includes('Icon'),
           `File ${filePath} harus menggunakan Hugeicons jika memuat ikon`
         ).toBe(true)
       }

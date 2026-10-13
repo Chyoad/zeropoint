@@ -34,14 +34,23 @@ export default async function KartuStokPage(props: PageProps) {
     cookieStore.get(ACTIVE_BRANCH_COOKIE)?.value
   )
 
-  // Gunakan parameter URL jika ada; jika tidak, gunakan cabang aktif dari sesi (jika bukan 'all')
-  const cabangIdParam =
-    resolvedSearchParams.cabang_id !== undefined
-      ? resolvedSearchParams.cabang_id
-      : activeBranchFromCookie || 'all'
+  // Evaluasi cabang:
+  // 1. Jika URL menyertakan cabang_id='all', pengguna sengaja memilih 'Semua Cabang', jangan ditimpa cookie.
+  // 2. Jika URL menyertakan cabang_id spesifik, gunakan cabang_id tersebut.
+  // 3. Jika URL tidak menyertakan cabang_id, gunakan activeBranchFromCookie (jika bukan 'all').
+  const isExplicitAll = resolvedSearchParams.cabang_id === 'all'
+  const cabangIdForQuery = isExplicitAll
+    ? undefined
+    : (resolvedSearchParams.cabang_id ||
+       (activeBranchFromCookie === 'all' ? undefined : activeBranchFromCookie) ||
+       undefined)
+
+  const cabangIdForFilter = isExplicitAll
+    ? 'all'
+    : (resolvedSearchParams.cabang_id || activeBranchFromCookie || 'all')
 
   const queryParams = {
-    cabang_id: cabangIdParam,
+    cabang_id: cabangIdForQuery,
     produk_id: resolvedSearchParams.produk_id,
     tanggal_mulai: resolvedSearchParams.tanggal_mulai,
     tanggal_selesai: resolvedSearchParams.tanggal_selesai,
@@ -82,7 +91,7 @@ export default async function KartuStokPage(props: PageProps) {
         daftarCabang={opsiFilter.daftarCabang}
         daftarProduk={opsiFilter.daftarProduk}
         initialFilters={{
-          cabang_id: cabangIdParam,
+          cabang_id: cabangIdForFilter,
           produk_id: resolvedSearchParams.produk_id,
           tanggal_mulai: resolvedSearchParams.tanggal_mulai,
           tanggal_selesai: resolvedSearchParams.tanggal_selesai,

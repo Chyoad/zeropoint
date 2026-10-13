@@ -32,13 +32,18 @@ export function formatTanggalWaktuIndonesia(
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return String(dateStr)
 
-  const pad = (n: number) => String(n).padStart(2, "0")
-  const day = pad(d.getUTCDate())
-  const month = pad(d.getUTCMonth() + 1)
-  const year = d.getUTCFullYear()
-  const hours = pad(d.getUTCHours())
-  const minutes = pad(d.getUTCMinutes())
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(d)
+    .replace(",", "")
+    .replace(/\./g, ":")
+    .trim()
 }
 

@@ -279,14 +279,12 @@ export function hitungMovingAverageRunningBalance(
         sisaQty > 0 ? normalisasiPresisi(saldoNilai / sisaQty) : hargaSatuan
     } else if (qtyKeluar > 0) {
       // Pada moving average, barang keluar dinilai berdasarkan HPP rata-rata yang sedang berlaku
-      if (hargaSatuan <= 0 && hppRataRata > 0) {
+      if (hppRataRata > 0) {
         hargaSatuan = hppRataRata
       }
-      if (totalNilaiKeluar <= 0) {
-        totalNilaiKeluar = normalisasiPresisi(
-          qtyKeluar * (hargaSatuan > 0 ? hargaSatuan : hppRataRata)
-        )
-      }
+      totalNilaiKeluar = normalisasiPresisi(
+        qtyKeluar * (hppRataRata > 0 ? hppRataRata : (hargaSatuan > 0 ? hargaSatuan : 0))
+      )
       sisaQty = normalisasiPresisi(sisaQty - qtyKeluar)
       saldoNilai = normalisasiPresisi(
         Math.max(0, saldoNilai - totalNilaiKeluar)
@@ -525,12 +523,35 @@ export async function ambilBukuBesarKartuStok(
       perkayaItemKartuStok(raw)
     )
 
-    // Hitung running balance moving average secara deterministik
-    const recalculated = hitungMovingAverageRunningBalance(enrichedItems)
-    const ringkasan = hitungRingkasanKartuStok(recalculated)
+    const hasTruncatedFilter = Boolean(tanggalMulai || jenisMutasi)
+    const hasStoredSnapshots = enrichedItems.some(
+      (r) =>
+        r.sisa_kuantitas !== undefined &&
+        r.sisa_kuantitas !== null &&
+        Number(r.sisa_kuantitas) !== 0
+    )
+
+    let finalItems: KartuStokItem[]
+    if (hasTruncatedFilter && hasStoredSnapshots) {
+      // Saat filter tanggal mulai atau jenis mutasi aktif, pertahankan running balance snapshot
+      // yang tersimpan di baris database kartu_stok agar tidak dihitung ulang dari 0.
+      finalItems = enrichedItems.map((item) => ({
+        ...item,
+        sisa_kuantitas: Number(item.sisa_kuantitas) || 0,
+        saldo_nilai: Number(item.saldo_nilai) || 0,
+        hpp_rata_rata: Number(item.hpp_rata_rata) || 0,
+        total_nilai_masuk: Number(item.total_nilai_masuk) || 0,
+        total_nilai_keluar: Number(item.total_nilai_keluar) || 0,
+      }))
+    } else {
+      // Hitung running balance moving average secara deterministik dari urutan kronologis
+      finalItems = hitungMovingAverageRunningBalance(enrichedItems)
+    }
+
+    const ringkasan = hitungRingkasanKartuStok(finalItems)
 
     return {
-      data: recalculated,
+      data: finalItems,
       ringkasan,
     }
   } catch {

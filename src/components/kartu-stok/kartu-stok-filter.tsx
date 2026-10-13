@@ -79,20 +79,37 @@ export function KartuStokFilter({
 
   const [isPending, startTransition] = React.useTransition()
 
-  // Sinkronkan state lokal saat parameter URL berubah
+  // Sinkronkan state lokal saat parameter URL atau initialFilters berubah
   React.useEffect(() => {
-    setCabangId(searchParams.get('cabang_id') || 'all')
-    setProdukId(searchParams.get('produk_id') || 'all')
-    setJenisMutasi(searchParams.get('jenis_mutasi') || 'all')
-    setTanggalMulai(searchParams.get('tanggal_mulai') || '')
-    setTanggalSelesai(searchParams.get('tanggal_selesai') || '')
-  }, [searchParams])
+    setCabangId(
+      searchParams.get('cabang_id') ?? initialFilters.cabang_id ?? 'all'
+    )
+    setProdukId(
+      searchParams.get('produk_id') ?? initialFilters.produk_id ?? 'all'
+    )
+    setJenisMutasi(
+      searchParams.get('jenis_mutasi') ?? initialFilters.jenis_mutasi ?? 'all'
+    )
+    setTanggalMulai(
+      searchParams.get('tanggal_mulai') ?? initialFilters.tanggal_mulai ?? ''
+    )
+    setTanggalSelesai(
+      searchParams.get('tanggal_selesai') ?? initialFilters.tanggal_selesai ?? ''
+    )
+  }, [
+    searchParams,
+    initialFilters.cabang_id,
+    initialFilters.produk_id,
+    initialFilters.jenis_mutasi,
+    initialFilters.tanggal_mulai,
+    initialFilters.tanggal_selesai,
+  ])
 
   const handleApplyFilter = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
 
     const params = new URLSearchParams()
-    if (cabangId && cabangId !== 'all') params.set('cabang_id', cabangId)
+    if (cabangId) params.set('cabang_id', cabangId)
     if (produkId && produkId !== 'all') params.set('produk_id', produkId)
     if (jenisMutasi && jenisMutasi !== 'all')
       params.set('jenis_mutasi', jenisMutasi)
@@ -113,7 +130,7 @@ export function KartuStokFilter({
     setTanggalSelesai('')
 
     startTransition(() => {
-      router.push(pathname)
+      router.push(`${pathname}?cabang_id=all`)
     })
   }
 
@@ -130,11 +147,16 @@ export function KartuStokFilter({
   }
 
   const isFiltered =
-    (cabangId && cabangId !== 'all') ||
+    (cabangId && cabangId !== (initialFilters.cabang_id || 'all')) ||
     (produkId && produkId !== 'all') ||
     (jenisMutasi && jenisMutasi !== 'all') ||
     Boolean(tanggalMulai) ||
-    Boolean(tanggalSelesai)
+    Boolean(tanggalSelesai) ||
+    searchParams.has('cabang_id') ||
+    searchParams.has('produk_id') ||
+    searchParams.has('jenis_mutasi') ||
+    searchParams.has('tanggal_mulai') ||
+    searchParams.has('tanggal_selesai')
 
   return (
     <div className="rounded-xl border bg-card p-4 shadow-xs space-y-4">
