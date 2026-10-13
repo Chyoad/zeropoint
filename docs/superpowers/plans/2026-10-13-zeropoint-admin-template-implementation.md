@@ -272,23 +272,23 @@
 **Interfaces:**
 - Produces: CRUD Cabang & Gudang dengan pembuatan kode otomatis `buat_kode('CBG', 4, 'tanpa_reset')`.
 
-- [ ] **Step 1: Tulis unit test skema Zod cabang di `tests/cabang-validation.test.ts`**
+- [x] **Step 1: Tulis unit test skema Zod cabang di `tests/cabang-validation.test.ts`**
   Uji validasi field: nama wajib, tipe ('pusat' | 'cabang' | 'gudang'), format nomor telepon.
 
-- [ ] **Step 2: Implementasikan `src/server/queries/cabang.ts` dan `src/server/actions/cabang.ts`**
+- [x] **Step 2: Implementasikan `src/server/queries/cabang.ts` dan `src/server/actions/cabang.ts`**
   - Queries: `ambilDaftarCabang()` dengan filter soft-delete (`deleted_at IS NULL`).
   - Actions: `simpanCabangAction(formData)`, `hapusCabangAction(id)` (soft-delete).
 
-- [ ] **Step 3: Buat data-table cabang di `src/components/cabang/cabang-table.tsx`**
+- [x] **Step 3: Buat data-table cabang di `src/components/cabang/cabang-table.tsx`**
   Tabel TanStack menampilkan: Kode, Nama, Tipe, Kota, Status Aktif, dan Action menu.
 
-- [ ] **Step 4: Buat dialog form cabang di `src/components/cabang/cabang-dialog.tsx`**
+- [x] **Step 4: Buat dialog form cabang di `src/components/cabang/cabang-dialog.tsx`**
   Dialog Tambah/Edit Cabang menggunakan React Hook Form + Zod resolver.
 
-- [ ] **Step 5: Buat halaman `src/app/(dashboard)/cabang/page.tsx`**
+- [x] **Step 5: Buat halaman `src/app/(dashboard)/cabang/page.tsx`**
   Halaman Server Component yang me-render header, tombol "Tambah Cabang", dan `CabangTable`.
 
-- [ ] **Step 6: Jalankan test, build, dan commit**
+- [x] **Step 6: Jalankan test, build, dan commit**
   ```bash
   pnpm vitest run tests/cabang-validation.test.ts
   git add src/server/queries/cabang.ts src/server/actions/cabang.ts src/components/cabang/ src/app/\(dashboard\)/cabang/ tests/
