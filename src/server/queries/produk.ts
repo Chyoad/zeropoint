@@ -749,9 +749,13 @@ export async function ambilDetailProduk(
     }
 
     const rawData = data as any
-    const activeSatuan: SatuanProduk[] = (rawData.satuan || []).filter(
-      (s: any) => !s.deleted_at
-    )
+    const activeSatuan: SatuanProduk[] = (rawData.satuan || [])
+      .filter((s: any) => !s.deleted_at)
+      .sort((a: SatuanProduk, b: SatuanProduk) => {
+        if (a.is_satuan_dasar && !b.is_satuan_dasar) return -1
+        if (!a.is_satuan_dasar && b.is_satuan_dasar) return 1
+        return a.rasio_ke_dasar - b.rasio_ke_dasar
+      })
     const satuanDasar =
       activeSatuan.find((s) => s.is_satuan_dasar) || activeSatuan[0] || null
 

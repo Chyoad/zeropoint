@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { type Control, useFieldArray, useWatch, Controller } from "react-hook-form"
+import { type Control, useFieldArray, useWatch, Controller, useFormContext } from "react-hook-form"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   PackageIcon,
@@ -49,6 +49,7 @@ export function KomponenPaketForm({
   })
 
   const isPaket = tipeProduk === "paket"
+  const { setValue } = useFormContext<ProdukFormInput>()
 
   const handleTambahKomponen = () => {
     // Pick the first available component if any
@@ -167,9 +168,10 @@ export function KomponenPaketForm({
                             pField.onChange(val)
                             const picked = availableProducts.find((p) => p.id === val)
                             if (picked?.satuan_dasar?.id) {
-                              register(`komponen.${index}.satuan_produk_id`).onChange({
-                                target: { value: picked.satuan_dasar.id },
-                              })
+                              setValue(
+                                `komponen.${index}.satuan_produk_id`,
+                                picked.satuan_dasar.id
+                              )
                             }
                           }}
                         >

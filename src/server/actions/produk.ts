@@ -12,7 +12,6 @@ import {
   type ProdukFormInput,
   type ProdukInput,
 } from '@/lib/validasi/produk'
-import { konversiKeSatuanDasar } from '@/lib/konversi-satuan'
 import {
   demoProdukStore,
   demoSatuanStore,
@@ -133,6 +132,30 @@ export async function simpanProdukAction(
       )
 
       if (!updateError && updatedSupabase) {
+        // Soft-delete satuan lama yang tidak ada di input
+        const { data: dbSatuan } = await withTimeout(
+          supabase
+            .from('satuan_produk')
+            .select('id')
+            .eq('produk_id', id)
+            .is('deleted_at', null)
+        )
+        if (dbSatuan) {
+          const inputSatuanIds = new Set(
+            satuan.filter((s) => s.id).map((s) => s.id)
+          )
+          for (const item of dbSatuan) {
+            if (!inputSatuanIds.has(item.id)) {
+              await withTimeout(
+                supabase
+                  .from('satuan_produk')
+                  .update({ deleted_at: now, updated_at: now })
+                  .eq('id', item.id)
+              )
+            }
+          }
+        }
+
         // Update / upsert satuan_produk
         for (const s of satuan) {
           if (s.id) {
@@ -166,6 +189,66 @@ export async function simpanProdukAction(
               })
             )
           }
+        }
+
+        // Sinkronisasi komponen_paket pada branch Supabase
+        if (tipe_produk === 'paket') {
+          const { data: dbKomponen } = await withTimeout(
+            supabase
+              .from('komponen_paket')
+              .select('id')
+              .eq('paket_id', id)
+              .is('deleted_at', null)
+          )
+          if (dbKomponen) {
+            const inputKomponenIds = new Set(
+              komponen.filter((k) => k.id).map((k) => k.id)
+            )
+            for (const item of dbKomponen) {
+              if (!inputKomponenIds.has(item.id)) {
+                await withTimeout(
+                  supabase
+                    .from('komponen_paket')
+                    .update({ deleted_at: now, updated_at: now })
+                    .eq('id', item.id)
+                )
+              }
+            }
+          }
+          for (const k of komponen) {
+            if (k.id) {
+              await withTimeout(
+                supabase
+                  .from('komponen_paket')
+                  .update({
+                    produk_komponen_id: k.produk_komponen_id,
+                    satuan_produk_id: k.satuan_produk_id || null,
+                    kuantitas: k.kuantitas,
+                    updated_at: now,
+                  })
+                  .eq('id', k.id)
+              )
+            } else {
+              await withTimeout(
+                supabase.from('komponen_paket').insert({
+                  kode: buatKodeFallback('KPK', demoKomponenStore),
+                  paket_id: id,
+                  produk_komponen_id: k.produk_komponen_id,
+                  satuan_produk_id: k.satuan_produk_id || null,
+                  kuantitas: k.kuantitas,
+                })
+              )
+            }
+          }
+        } else {
+          // Jika tipe diubah dari paket ke non-paket, soft-delete semua komponen lama
+          await withTimeout(
+            supabase
+              .from('komponen_paket')
+              .update({ deleted_at: now, updated_at: now })
+              .eq('paket_id', id)
+              .is('deleted_at', null)
+          )
         }
 
         revalidatePath('/produk')
@@ -245,6 +328,56 @@ export async function simpanProdukAction(
           demoSatuanStore.push(newSatuan)
         }
       })
+
+      // Sync komponen_paket di in-memory store
+      if (tipe_produk === 'paket') {
+        const currentKomponen = demoKomponenStore.filter(
+          (k) => k.paket_id === id && !k.deleted_at
+        )
+        currentKomponen.forEach((ck) => {
+          const stillExists = komponen.some((k) => k.id === ck.id)
+          if (!stillExists) {
+            ck.deleted_at = now
+          }
+        })
+
+        komponen.forEach((k) => {
+          if (k.id) {
+            const idx = demoKomponenStore.findIndex((dk) => dk.id === k.id)
+            if (idx !== -1) {
+              demoKomponenStore[idx] = {
+                ...demoKomponenStore[idx],
+                produk_komponen_id: k.produk_komponen_id,
+                satuan_produk_id: k.satuan_produk_id || null,
+                kuantitas: k.kuantitas,
+                updated_at: now,
+              }
+            }
+          } else {
+            demoKomponenStore.push({
+              id: crypto.randomUUID(),
+              kode: buatKodeFallback('KPK', demoKomponenStore),
+              paket_id: id,
+              produk_komponen_id: k.produk_komponen_id,
+              satuan_produk_id: k.satuan_produk_id || null,
+              kuantitas: k.kuantitas,
+              created_at: now,
+              updated_at: now,
+              created_by: null,
+              updated_by: null,
+              deleted_at: null,
+              deleted_by: null,
+            })
+          }
+        })
+      } else {
+        const currentKomponen = demoKomponenStore.filter(
+          (k) => k.paket_id === id && !k.deleted_at
+        )
+        currentKomponen.forEach((ck) => {
+          ck.deleted_at = now
+        })
+      }
 
       revalidatePath('/produk')
       revalidatePath('/dashboard')
@@ -612,6 +745,56 @@ export async function simpanProdukAction(
             })
           }
         })
+
+        // Sync komponen_paket di in-memory store
+        if (tipe_produk === 'paket') {
+          const currentKomponen = demoKomponenStore.filter(
+            (k) => k.paket_id === id && !k.deleted_at
+          )
+          currentKomponen.forEach((ck) => {
+            const stillExists = komponen.some((k) => k.id === ck.id)
+            if (!stillExists) {
+              ck.deleted_at = now
+            }
+          })
+
+          komponen.forEach((k) => {
+            if (k.id) {
+              const idx = demoKomponenStore.findIndex((dk) => dk.id === k.id)
+              if (idx !== -1) {
+                demoKomponenStore[idx] = {
+                  ...demoKomponenStore[idx],
+                  produk_komponen_id: k.produk_komponen_id,
+                  satuan_produk_id: k.satuan_produk_id || null,
+                  kuantitas: k.kuantitas,
+                  updated_at: now,
+                }
+              }
+            } else {
+              demoKomponenStore.push({
+                id: crypto.randomUUID(),
+                kode: buatKodeFallback('KPK', demoKomponenStore),
+                paket_id: id,
+                produk_komponen_id: k.produk_komponen_id,
+                satuan_produk_id: k.satuan_produk_id || null,
+                kuantitas: k.kuantitas,
+                created_at: now,
+                updated_at: now,
+                created_by: null,
+                updated_by: null,
+                deleted_at: null,
+                deleted_by: null,
+              })
+            }
+          })
+        } else {
+          const currentKomponen = demoKomponenStore.filter(
+            (k) => k.paket_id === id && !k.deleted_at
+          )
+          currentKomponen.forEach((ck) => {
+            ck.deleted_at = now
+          })
+        }
 
         revalidatePath('/produk')
         revalidatePath('/dashboard')

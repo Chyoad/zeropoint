@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useForm, Controller, useWatch } from "react-hook-form"
+import { useForm, Controller, useWatch, FormProvider } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -144,15 +144,17 @@ export function ProdukFormTabs({
     }
   }, [initialData, daftarKategori, daftarCabang])
 
+  const formMethods = useForm<ProdukFormInput, any, ProdukInput>({
+    resolver: zodResolver(produkSchema),
+    defaultValues,
+  })
+
   const {
     register,
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<ProdukFormInput, any, ProdukInput>({
-    resolver: zodResolver(produkSchema),
-    defaultValues,
-  })
+  } = formMethods
 
   const watchedTipe = useWatch({
     control,
@@ -264,6 +266,7 @@ export function ProdukFormTabs({
         </div>
       </div>
 
+    <FormProvider {...formMethods}>
       <form id="produk-form" onSubmit={handleSubmit(onSubmit)}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted p-1 rounded-lg grid grid-cols-2 sm:grid-cols-4 gap-1">
@@ -535,6 +538,7 @@ export function ProdukFormTabs({
           </TabsContent>
         </Tabs>
       </form>
-    </div>
+    </FormProvider>
+  </div>
   )
 }

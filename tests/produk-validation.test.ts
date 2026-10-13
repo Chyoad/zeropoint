@@ -582,6 +582,85 @@ describe('Server Actions (simpanProdukAction, hapusProdukAction)', () => {
     expect(detail?.satuan?.[0]?.nama_satuan).toBe('Bungkus')
   })
 
+  it('should synchronize package components when editing a paket product', async () => {
+    const paketId = '40000000-0000-0000-0000-000000000004' // PRD-0004 Paket Workstation
+    const initialDetail = await ambilDetailProduk(paketId)
+    expect(initialDetail?.komponen).toHaveLength(2)
+
+    // Edit paket: Ubah kuantitas mouse jadi 2, hapus jasa, tambah indomie
+    const response = await simpanProdukAction(
+      {
+        nama: 'Paket Workstation Hemat Upgrade',
+        tipe_produk: 'paket',
+        satuan: [
+          {
+            nama_satuan: 'Paket',
+            rasio_ke_dasar: 1,
+            is_satuan_dasar: true,
+            harga_jual_default: 250000,
+          },
+        ],
+        komponen: [
+          {
+            produk_komponen_id: '40000000-0000-0000-0000-000000000002', // Mouse
+            kuantitas: 2,
+          },
+          {
+            produk_komponen_id: '40000000-0000-0000-0000-000000000001', // Indomie
+            kuantitas: 5,
+          },
+        ],
+      },
+      paketId
+    )
+
+    expect(response.success).toBe(true)
+    const updatedDetail = await ambilDetailProduk(paketId)
+    expect(updatedDetail?.nama).toBe('Paket Workstation Hemat Upgrade')
+    expect(updatedDetail?.komponen).toHaveLength(2)
+
+    const mouseComp = updatedDetail?.komponen?.find(
+      (k) => k.produk_komponen_id === '40000000-0000-0000-0000-000000000002'
+    )
+    expect(mouseComp?.kuantitas).toBe(2)
+
+    const indomieComp = updatedDetail?.komponen?.find(
+      (k) => k.produk_komponen_id === '40000000-0000-0000-0000-000000000001'
+    )
+    expect(indomieComp?.kuantitas).toBe(5)
+
+    const jasaComp = updatedDetail?.komponen?.find(
+      (k) => k.produk_komponen_id === '40000000-0000-0000-0000-000000000003'
+    )
+    expect(jasaComp).toBeUndefined()
+  })
+
+  it('should soft-delete all components when product type is changed from paket to jasa', async () => {
+    const paketId = '40000000-0000-0000-0000-000000000004'
+
+    const response = await simpanProdukAction(
+      {
+        nama: 'Eks Paket Menjadi Jasa Konsultasi',
+        tipe_produk: 'jasa',
+        satuan: [
+          {
+            nama_satuan: 'Layanan',
+            rasio_ke_dasar: 1,
+            is_satuan_dasar: true,
+            harga_jual_default: 100000,
+          },
+        ],
+        komponen: [],
+      },
+      paketId
+    )
+
+    expect(response.success).toBe(true)
+    const updatedDetail = await ambilDetailProduk(paketId)
+    expect(updatedDetail?.tipe_produk).toBe('jasa')
+    expect(updatedDetail?.komponen).toHaveLength(0)
+  })
+
   it('should soft-delete product', async () => {
     const deleteId = '40000000-0000-0000-0000-000000000002' // Mouse
     const deleteResponse = await hapusProdukAction(deleteId)
