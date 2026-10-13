@@ -41,19 +41,19 @@
 **Interfaces:**
 - Produces: Fondasi Next.js App Router, shadcn components, Outfit typography, dan `@hugeicons/react`.
 
-- [ ] **Step 1: Inisialisasi Next.js dengan shadcn preset**
+- [x] **Step 1: Inisialisasi Next.js dengan shadcn preset**
   Jalankan perintah inisialisasi:
   ```bash
   pnpm dlx shadcn@latest init --preset b7BFgU2rI --template next --rtl --pointer -y
   ```
 
-- [ ] **Step 2: Pasang package @hugeicons/react & @supabase/ssr**
+- [x] **Step 2: Pasang package @hugeicons/react & @supabase/ssr**
   Pasang library ikon dan Supabase:
   ```bash
   pnpm add @hugeicons/react @supabase/ssr @supabase/supabase-js zod react-hook-form @hookform/resolvers @tanstack/react-table next-themes
   ```
 
-- [ ] **Step 3: Konfigurasi Font Outfit di `src/app/layout.tsx`**
+- [x] **Step 3: Konfigurasi Font Outfit di `src/app/layout.tsx`**
   Impor `Outfit` dari `next/font/google` dengan variabel `--font-outfit`:
   ```tsx
   import { Outfit } from "next/font/google";
@@ -61,13 +61,13 @@
   ```
   Terapkan kelas `${outfit.variable} font-sans` pada tag `<body>`, dengan atribut `dir="ltr"` secara default.
 
-- [ ] **Step 4: Pasang blok layout `sidebar-07` dan komponen inti UI shadcn**
+- [x] **Step 4: Pasang blok layout `sidebar-07` dan komponen inti UI shadcn**
   Jalankan perintah:
   ```bash
   npx shadcn@latest add sidebar-07 button dialog dropdown-menu input select table badge card avatar tabs sonner tooltip separator -y
   ```
 
-- [ ] **Step 5: Verifikasi build dan commit**
+- [x] **Step 5: Verifikasi build dan commit**
   ```bash
   pnpm build
   git add .
