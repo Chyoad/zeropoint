@@ -231,26 +231,26 @@
 - Produces: Layout dashboard lengkap dengan `BranchSwitcher` di header `sidebar-07`, navigasi menu utama, dan Overview KPI page.
 - Consumes: `@hugeicons/react`, `useActiveBranch`, `sidebar-07`.
 
-- [ ] **Step 1: Implementasikan `src/components/layout/branch-switcher.tsx`**
+- [x] **Step 1: Implementasikan `src/components/layout/branch-switcher.tsx`**
   Komponen dropdown pemilih cabang di header sidebar:
   - Tampilkan nama cabang aktif + badge (`HQ`, `Cabang`, `Gudang`).
   - Dropdown pencarian cabang cepat.
   - Opsi *"Semua Cabang (Konsolidasi)"* untuk Superadmin.
   - Gunakan ikon `Building04Icon` dan `ArrowUpDownIcon` dari `@hugeicons/react`.
 
-- [ ] **Step 2: Migrasikan ikon `sidebar-07` ke `@hugeicons/react`**
+- [x] **Step 2: Migrasikan ikon `sidebar-07` ke `@hugeicons/react`**
   Sesuaikan `src/components/layout/app-sidebar.tsx`:
   - Ganti semua import ikon Lucide menjadi ikon Stroke Rounded dari `@hugeicons/react` (`DashboardSquare01Icon`, `PackageIcon`, `Invoice01Icon`, `Store01Icon`, `UserGroupIcon`, `Settings02Icon`, dll.).
   - Pasang `BranchSwitcher` di bagian atas (`SidebarHeader`).
 
-- [ ] **Step 3: Implementasikan `src/components/layout/user-nav.tsx`**
+- [x] **Step 3: Implementasikan `src/components/layout/user-nav.tsx`**
   Dropdown profil user di sidebar footer / header: avatar, nama staf, role badge, tombol logout.
 
-- [ ] **Step 4: Buat `src/app/(dashboard)/layout.tsx` dan `page.tsx`**
+- [x] **Step 4: Buat `src/app/(dashboard)/layout.tsx` dan `page.tsx`**
   - `layout.tsx`: Membungkus konten dalam `SidebarProvider` dan `SidebarInset`.
   - `page.tsx`: Overview KPI Dashboard (Total Produk, Nilai Persediaan, Mutasi Pending, Peringatan Stok Minimum) yang otomatis terfilter oleh cabang aktif.
 
-- [ ] **Step 5: Verifikasi build dan commit**
+- [x] **Step 5: Verifikasi build dan commit**
   ```bash
   pnpm build
   git add src/components/layout/ src/app/\(dashboard\)/
