@@ -189,26 +189,26 @@
 **Interfaces:**
 - Produces: `createClient()` (browser), `createClient()` (server RSC/Action), `getActiveBranchId()`, `setActiveBranchId(branchId: string | null)`.
 
-- [ ] **Step 1: Tulis test untuk helper sesi cabang di `tests/branch-session.test.ts`**
+- [x] **Step 1: Tulis test untuk helper sesi cabang di `tests/branch-session.test.ts`**
   Uji logika validasi ID cabang dan pembacaan cookie `zeropoint_active_branch_id`.
 
-- [ ] **Step 2: Jalankan test (FAIL)**
+- [x] **Step 2: Jalankan test (FAIL)**
   ```bash
   pnpm vitest run tests/branch-session.test.ts
   ```
 
-- [ ] **Step 3: Implementasikan Supabase SSR client di `src/lib/supabase/`**
+- [x] **Step 3: Implementasikan Supabase SSR client di `src/lib/supabase/`**
   - `client.ts`: `createBrowserClient`
   - `server.ts`: `createServerClient` dengan `cookies()` dari `next/headers`
   - `middleware.ts`: Refresh session Supabase dan inject active branch cookie
 
-- [ ] **Step 4: Buat Server Action `src/server/actions/branch-session.ts`**
+- [x] **Step 4: Buat Server Action `src/server/actions/branch-session.ts`**
   Fungsi `setActiveBranchAction(branchId: string | 'all')` yang menulis HTTP cookie dan memanggil `revalidatePath('/', 'layout')`.
 
-- [ ] **Step 5: Buat hook `src/hooks/use-active-branch.ts`**
+- [x] **Step 5: Buat hook `src/hooks/use-active-branch.ts`**
   Hook React untuk membaca nilai cabang aktif saat ini dan mentrigger perpindahan cabang.
 
-- [ ] **Step 6: Jalankan test (PASS) dan commit**
+- [x] **Step 6: Jalankan test (PASS) dan commit**
   ```bash
   pnpm vitest run tests/branch-session.test.ts
   git add src/lib/supabase/ src/middleware.ts src/hooks/ src/server/actions/ tests/
