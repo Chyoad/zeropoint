@@ -4,8 +4,8 @@ import { useState, useTransition, useCallback } from 'react'
 import {
   ACTIVE_BRANCH_COOKIE,
   isValidBranchId,
-  setActiveBranchAction,
-} from '@/server/actions/branch-session'
+} from '@/lib/branch-session'
+import { setActiveBranchAction } from '@/server/actions/branch-session'
 
 export interface UseActiveBranchOptions {
   initialBranchId?: string | null
