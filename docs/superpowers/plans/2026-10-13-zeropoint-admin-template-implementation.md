@@ -310,19 +310,19 @@
 **Interfaces:**
 - Produces: Pengelolaan staf, penugasan role (Superadmin, HQ Manager, Branch Manager, Staff, Viewer), dan penugasan multi-cabang (`user_cabang`).
 
-- [ ] **Step 1: Tulis test validasi penugasan user di `tests/user-validation.test.ts`**
+- [x] **Step 1: Tulis test validasi penugasan user di `tests/user-validation.test.ts`**
   Validasi role dan keharusan memilih minimal 1 cabang jika role adalah branch_manager atau staff.
 
-- [ ] **Step 2: Implementasikan Server Queries & Actions di `src/server/`**
+- [x] **Step 2: Implementasikan Server Queries & Actions di `src/server/`**
   - `ambilDaftarUser()` (join dengan `user_cabang` dan `cabang`).
   - `simpanUserAction()` dan `hapusUserAction()`.
 
-- [ ] **Step 3: Buat komponen UI tabel dan dialog penugasan cabang**
+- [x] **Step 3: Buat komponen UI tabel dan dialog penugasan cabang**
   Daftar user dengan chip cabang yang dapat diakses dan pemilihan cabang default.
 
-- [ ] **Step 4: Buat halaman `src/app/(dashboard)/user/page.tsx`**
+- [x] **Step 4: Buat halaman `src/app/(dashboard)/user/page.tsx`**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add src/server/queries/user.ts src/server/actions/user.ts src/components/user/ src/app/\(dashboard\)/user/ tests/
   git commit -m "feat: implement users and multi-branch assignment module"
