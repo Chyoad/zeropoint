@@ -149,14 +149,14 @@
 **Interfaces:**
 - Produces: DDL tabel `organisasi`, `cabang`, `user_profile`, `user_cabang`, `kategori_produk`, `produk`, `satuan_produk`, `komponen_paket`, `stok_produk`, `kartu_stok`, `penyesuaian_stok`, `penyesuaian_stok_item`, `log_audit`, `urutan_kode`, fungsi `buat_kode`, `sinkron_urutan_kode`, dan fungsi RLS `auth.is_superadmin()`, `auth.has_branch_access()`.
 
-- [ ] **Step 1: Buat file migrasi SQL `supabase/migrations/20261013000000_skema_produk_dan_kartu_stok.sql`**
+- [x] **Step 1: Buat file migrasi SQL `supabase/migrations/20261013000000_skema_produk_dan_kartu_stok.sql`**
   - Definisikan tabel `urutan_kode` beserta fungsi atomik `buat_kode()` dan `sinkron_urutan_kode()`.
   - Definisikan 12 tabel data dengan seluruh kolom dalam Bahasa Indonesia singular `snake_case`, `id` UUID PK, `kode` unik, dan 6 kolom sistem.
   - Tambahkan fungsi trigger `trg_set_updated_at` untuk memperbarui kolom `updated_at`.
   - Buat helper functions `auth.is_superadmin()` dan `auth.has_branch_access(target_cabang_id UUID)`.
   - Aktifkan Row-Level Security (RLS) pada semua tabel dengan filter `deleted_at IS NULL`.
 
-- [ ] **Step 2: Buat `supabase/seed.sql`**
+- [x] **Step 2: Buat `supabase/seed.sql`**
   - Masukkan data awal organisasi default (`ORG-0001`, "PT Zeropoint Graha Abadi").
   - Masukkan cabang demo: `HQ-0001` (Jakarta - Pusat), `CBG-0001` (Surabaya - Cabang), `GDG-0001` (Cikarang - Gudang).
   - Masukkan kategori produk: Bahan Makanan, Komputer & IT, Layanan Jasa.
@@ -164,10 +164,10 @@
   - Masukkan saldo awal kartu stok demo pada cabang HQ dan Gudang Cikarang.
   - Panggil `sinkron_urutan_kode` untuk setiap tabel di akhir file seed.
 
-- [ ] **Step 3: Buat TypeScript definitions di `src/types/database.types.ts`**
+- [x] **Step 3: Buat TypeScript definitions di `src/types/database.types.ts`**
   Definisikan tipe TypeScript lengkap untuk setiap baris tabel, tipe insert, dan tipe update sesuai skema SQL.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   ```bash
   git add supabase/ src/types/database.types.ts
   git commit -m "feat: add initial database schema migrations and seed data"
