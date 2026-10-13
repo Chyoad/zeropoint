@@ -3,11 +3,7 @@
 ## 1. Ringkasan Eksekutif & Visi Produk
 **Zeropoint** adalah template admin dashboard perusahaan modern yang modular dan dapat digunakan kembali (*reusable foundation*) untuk satu perusahaan dengan struktur banyak cabang dan gudang (*multi-branch & multi-warehouse*).
 
-Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem internal perusahaan:
-- **Isolasi dan Scoping Data Antar Cabang**: Data transaksi, stok, dan operasional otomatis terfilter berdasarkan cabang/gudang yang sedang aktif.
-- **Hierarki Akses & Keamanan Bertingkat**: Superadmin/HQ memiliki akses menyeluruh ke semua cabang, sedangkan staf operasional terkunci pada cabang yang ditugaskan.
-- **Standar Skema Database Konsisten**: Mengikuti aturan penamaan Bahasa Indonesia dalam format *snake_case* tunggal, kode bisnis human-readable otomatis, dan jejak audit/soft-delete menyeluruh.
-- **Fondasi Siap Pakai (*Turnkey Architecture*)**: Dilengkapi modul dasar esensial (Cabang, Pengguna & Hak Akses, Inventaris & Mutasi Stok, Audit Trail, Pengaturan Organisasi) sebagai referensi standar implementasi modul bisnis apa pun di masa mendatang.
+Fokus utama perancangan tahap ini diarahkan pada **Master Data Produk & Persediaan Lengkap ala Software Akuntansi Accurate** (mendukung Multi-Satuan, Tipe Produk Lengkap, Paket Dinamis, Kartu Stok / *Stock Ledger*, dan Valuasi Ganda Moving Average & FIFO), sementara modul mutasi antar gudang dikesampingkan terlebih dahulu agar fondasi data produk dan persediaan benar-benar solid dan matang.
 
 ---
 
@@ -42,9 +38,8 @@ Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem
      - Tombol dropdown pencarian & perpindahan cabang cepat
      - Opsi `"Semua Cabang / Konsolidasi"` (hanya dapat dipilih oleh role Superadmin atau HQ Manager)
 3. **Penyaringan Data Otomatis**:
-   - Setiap query database di Server Component/Action membaca `active_branch_id`.
-   - Jika role pengguna adalah staf cabang, query dibatasi ketat ke cabang yang ditugaskan melalui RLS database.
-   - Jika Superadmin memilih cabang tertentu, UI dan data difokuskan ke cabang tersebut.
+   - Setiap query stok produk dan kartu stok di Server Component/Action membaca `active_branch_id`.
+   - Staf cabang otomatis hanya melihat stok dan kartu stok di cabangnya melalui Supabase RLS.
 
 ```
 +-----------------------------------------------------------+
@@ -55,8 +50,9 @@ Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem
 | - Dashboard                                               |
 | - Cabang & Gudang                                         |
 | - Pengguna & Hak Akses                                    |
-| - Inventaris & Stok                                       |
-| - Mutasi / Transfer Antar Cabang                          |
+| - Master Produk (Multi-Satuan & Paket)                   |
+| - Kartu Stok (Stock Ledger)                               |
+| - Penyesuaian Stok (Stock Opname)                         |
 | - Audit Log                                               |
 | - Pengaturan                                              |
 +-----------------------------------------------------------+
@@ -68,22 +64,15 @@ Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem
 
 ### 4.1. Tingkatan Role
 1. **Superadmin (Owner/Direksi)**:
-   - Akses penuh tanpa batas ke seluruh data, cabang, pengaturan sistem, dan manajemen user.
-   - Dapat berpindah ke cabang mana pun atau melihat agregasi "Semua Cabang".
+   - Akses penuh tanpa batas ke seluruh data, cabang, master produk, kartu stok semua cabang, dan pengaturan sistem.
 2. **HQ Manager (Manajer Pusat)**:
-   - Akses lintas cabang untuk melihat laporan, inventaris, dan memvalidasi transfer stok.
-   - Tidak dapat mengubah konfigurasi sensitif sistem dan hak akses Superadmin.
+   - Akses lintas cabang untuk melihat laporan stok terpusat, mengelola master produk, dan verifikasi opname.
 3. **Branch Manager (Kepala Cabang / Kepala Gudang)**:
-   - Akses penuh untuk operasional dalam cabang/gudang yang ditugaskan kepadanya.
-   - Dapat mengelola staf internal cabangnya dan menyetujui mutasi stok cabang.
+   - Akses operasional dalam cabang/gudang miliknya (melihat kartu stok cabang, melakukan penyesuaian stok cabang).
 4. **Staff / Operator**:
-   - Akses input data transaksi dan update stok hanya pada cabang aktif miliknya.
+   - Akses input operasional pada cabang aktif yang ditugaskan.
 5. **Viewer / Auditor**:
-   - Akses *read-only* (hanya lihat) untuk audit data dan pelaporan.
-
-### 4.2. Model Relasi Akses Pengguna ke Cabang
-- Pengguna ditugaskan ke satu atau beberapa cabang melalui tabel relasi `user_cabang`.
-- Superadmin secara otomatis memiliki hak akses ke semua cabang (`is_superadmin = true`).
+   - Akses *read-only* untuk audit kartu stok dan laporan inventaris.
 
 ---
 
@@ -91,15 +80,14 @@ Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem
 
 ### 5.1. Aturan Baku Database (*Database Conventions*)
 1. **Bahasa & Nomenklatur**:
-   - Nama tabel dan kolom menggunakan **Bahasa Indonesia**, format **`snake_case`**, dan **bentuk tunggal (singular)** (contoh: `organisasi`, `cabang`, `barang`, `stok_barang`, `transfer_stok`, `log_audit`, `urutan_kode`).
-   - **Pengecualian**: Istilah teknis standar seperti `user` (contoh: `user_profile`, `user_cabang`, `user_id`, `role`, `email`, `avatar_url`) dan kolom sistem baku.
+   - Nama tabel dan kolom menggunakan **Bahasa Indonesia**, format **`snake_case`**, dan **bentuk tunggal (singular)** (misalnya: `organisasi`, `cabang`, `produk`, `satuan_produk`, `komponen_paket`, `stok_produk`, `kartu_stok`, `penyesuaian_stok`, `penyesuaian_stok_item`, `log_audit`, `urutan_kode`).
+   - **Pengecualian**: Istilah teknis standar seperti `user` (`user_profile`, `user_cabang`, `user_id`, `role`, `email`, `avatar_url`) dan kolom sistem baku.
 2. **Kunci Primer (Primary Key)**:
    - Setiap tabel wajib memiliki kolom `id` bertipe `UUID PRIMARY KEY DEFAULT gen_random_uuid()`.
 3. **Kode Bisnis Unik (*Human-Readable Code*)**:
-   - Setiap tabel wajib memiliki kolom `kode` bertipe `TEXT UNIQUE NOT NULL` sebagai identitas bisnis yang mudah dibaca pengguna (misalnya: `ORG-0001`, `CBG-0001`, `BRG-0001`, `TRF-20261013-0001`).
+   - Setiap tabel wajib memiliki kolom `kode` bertipe `TEXT UNIQUE NOT NULL` sebagai identitas bisnis yang mudah dibaca pengguna (misal: `ORG-0001`, `CBG-0001`, `PRD-0001`, `KST-20261013-0001`, `ADJ-20261013-0001`).
 4. **Konvensi Relasi (Foreign Key)**:
-   - Semua relasi foreign key menggunakan format **`<tabel>_id`** bertipe `UUID` (contoh: `organisasi_id`, `cabang_id`, `barang_id`, `user_id`).
-   - Untuk relasi ganda ke tabel yang sama, gunakan peran yang jelas dengan akhiran `_id` (contoh: `cabang_asal_id`, `cabang_tujuan_id`, `diajukan_oleh_id`).
+   - Semua relasi foreign key menggunakan format **`<tabel>_id`** bertipe `UUID` (contoh: `organisasi_id`, `cabang_id`, `produk_id`, `satuan_produk_id`, `user_id`).
 5. **Kolom Sistem Wajib (*Audit & Soft Delete*)**:
    - Setiap tabel operasional wajib memiliki 6 kolom sistem:
      - `created_at TIMESTAMPTZ DEFAULT now() NOT NULL`
@@ -111,7 +99,7 @@ Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem
 
 ---
 
-### 5.2. Entity Relationship Diagram (ERD)
+### 5.2. Entity Relationship Diagram (ERD) - Master Produk & Persediaan
 
 ```mermaid
 erDiagram
@@ -119,12 +107,20 @@ erDiagram
     ORGANISASI ||--o{ USER_PROFILE : memiliki
     CABANG ||--o{ USER_CABANG : ditugaskan
     USER_PROFILE ||--o{ USER_CABANG : memiliki
-    USER_PROFILE ||--o{ LOG_AUDIT : melakukan
-    CABANG ||--o{ LOG_AUDIT : mencatat
-    CABANG ||--o{ STOK_BARANG : menyimpan
-    BARANG ||--o{ STOK_BARANG : dicatat_di
-    CABANG ||--o{ TRANSFER_STOK : asal_tujuan
-    BARANG ||--o{ TRANSFER_STOK : dipindahkan
+    ORGANISASI ||--o{ KATEGORI_PRODUK : memiliki
+    ORGANISASI ||--o{ PRODUK : memiliki
+    KATEGORI_PRODUK ||--o{ PRODUK : mengelompokkan
+    PRODUK ||--|{ SATUAN_PRODUK : memiliki_satuan
+    PRODUK ||--o{ KOMPONEN_PAKET : sebagai_paket
+    PRODUK ||--o{ KOMPONEN_PAKET : sebagai_komponen
+    PRODUK ||--o{ STOK_PRODUK : dicatat_stok
+    CABANG ||--o{ STOK_PRODUK : lokasi_stok
+    PRODUK ||--o{ KARTU_STOK : mutasi
+    CABANG ||--o{ KARTU_STOK : lokasi_mutasi
+    SATUAN_PRODUK ||--o{ KARTU_STOK : satuan_transaksi
+    CABANG ||--o{ PENYESUAIAN_STOK : lokasi_opname
+    PENYESUAIAN_STOK ||--|{ PENYESUAIAN_STOK_ITEM : rincian_item
+    PRODUK ||--o{ PENYESUAIAN_STOK_ITEM : disesuaikan
 
     ORGANISASI {
         uuid id PK
@@ -158,47 +154,35 @@ erDiagram
         uuid deleted_by
     }
 
-    USER_PROFILE {
-        uuid id PK "references auth.users"
-        text kode UK "USR-0001"
-        uuid organisasi_id FK
-        text nama_lengkap
-        text email
-        text role "superadmin | hq_manager | branch_manager | staff | viewer"
-        text avatar_url
-        boolean is_aktif
-        timestamptz created_at
-        timestamptz updated_at
-        uuid created_by
-        uuid updated_by
-        timestamptz deleted_at
-        uuid deleted_by
-    }
-
-    USER_CABANG {
+    KATEGORI_PRODUK {
         uuid id PK
-        text kode UK "UCB-0001"
-        uuid user_id FK
-        uuid cabang_id FK
-        boolean is_default
-        timestamptz created_at
-        timestamptz updated_at
-        uuid created_by
-        uuid updated_by
-        timestamptz deleted_at
-        uuid deleted_by
-    }
-
-    BARANG {
-        uuid id PK
-        text kode UK "BRG-0001"
+        text kode UK "KAT-0001"
         uuid organisasi_id FK
         text nama
-        text kategori
-        text satuan "pcs | box | kg"
-        numeric harga_beli
-        numeric harga_jual
+        text keterangan
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
+    }
+
+    PRODUK {
+        uuid id PK
+        text kode UK "PRD-0001"
+        uuid organisasi_id FK
+        uuid kategori_produk_id FK
+        text nama
+        text tipe_produk "persediaan | non_persediaan | jasa | paket"
+        text metode_valuasi "rata_rata | fifo"
+        numeric harga_pokok_standar
+        numeric harga_beli_terakhir
         numeric peringatan_stok_minimum
+        boolean dapat_dijual
+        boolean dapat_dibeli
+        text gambar_url
+        text deskripsi
         boolean is_aktif
         timestamptz created_at
         timestamptz updated_at
@@ -208,14 +192,17 @@ erDiagram
         uuid deleted_by
     }
 
-    STOK_BARANG {
+    SATUAN_PRODUK {
         uuid id PK
-        text kode UK "STK-0001"
-        uuid barang_id FK
-        uuid cabang_id FK
-        numeric jumlah
-        numeric jumlah_tersedia
-        numeric jumlah_tertahan
+        text kode UK "SAT-0001"
+        uuid produk_id FK
+        text nama_satuan "Pcs | Lusin | Box | Karton"
+        numeric rasio_ke_dasar "1 untuk satuan dasar, misal 12 untuk Lusin"
+        boolean is_satuan_dasar
+        text barcode UK
+        numeric harga_jual_default
+        numeric harga_jual_grosir
+        numeric harga_jual_member
         timestamptz created_at
         timestamptz updated_at
         uuid created_by
@@ -224,16 +211,62 @@ erDiagram
         uuid deleted_by
     }
 
-    TRANSFER_STOK {
+    KOMPONEN_PAKET {
         uuid id PK
-        text kode UK "TRF-20261013-0001"
-        uuid cabang_asal_id FK
-        uuid cabang_tujuan_id FK
-        uuid barang_id FK
-        numeric jumlah
-        text status "draft | menunggu | dalam_pengiriman | diterima | ditolak"
-        uuid diajukan_oleh_id FK
-        uuid disetujui_oleh_id FK
+        text kode UK "KPK-0001"
+        uuid paket_id FK "merujuk produk bertipe paket"
+        uuid produk_komponen_id FK "merujuk produk bertipe persediaan/jasa"
+        uuid satuan_produk_id FK "satuan yang digunakan untuk komponen"
+        numeric kuantitas
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
+    }
+
+    STOK_PRODUK {
+        uuid id PK
+        text kode UK "STK-0001"
+        uuid produk_id FK
+        uuid cabang_id FK
+        numeric kuantitas "dalam satuan dasar"
+        numeric kuantitas_tersedia "dalam satuan dasar"
+        numeric kuantitas_tertahan "dalam satuan dasar"
+        numeric hpp_rata_rata "harga pokok rata-rata bergerak saat ini"
+        numeric total_nilai "kuantitas * hpp_rata_rata"
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
+    }
+
+    KARTU_STOK {
+        uuid id PK
+        text kode UK "KST-20261013-0001"
+        uuid cabang_id FK
+        uuid produk_id FK
+        timestamptz tanggal
+        text jenis_mutasi "saldo_awal | masuk_pembelian | keluar_penjualan | penyesuaian_masuk | penyesuaian_keluar | keluar_paket | retur_masuk | retur_keluar"
+        text nomor_referensi
+        uuid referensi_id
+        uuid satuan_produk_id FK "satuan fisik saat transaksi"
+        numeric kuantitas_transaksi "kuantitas dalam satuan fisik"
+        numeric faktor_konversi "faktor pengali ke satuan dasar"
+        numeric kuantitas_masuk "dalam satuan dasar (0 jika keluar)"
+        numeric kuantitas_keluar "dalam satuan dasar (0 jika masuk)"
+        numeric sisa_kuantitas "running balance kuantitas dalam satuan dasar"
+        numeric harga_satuan "harga/HPP per satuan dasar untuk mutasi ini"
+        numeric total_nilai_masuk
+        numeric total_nilai_keluar
+        numeric saldo_nilai "total nilai rupiah persediaan tersisa"
+        numeric hpp_rata_rata "nilai rata-rata bergerak saat ini"
+        text batch_nomor "nomor batch/lot jika ada"
+        date tanggal_kadaluarsa
+        uuid kartu_stok_masuk_id FK "alokasi lapisan FIFO"
         text catatan
         timestamptz created_at
         timestamptz updated_at
@@ -243,15 +276,34 @@ erDiagram
         uuid deleted_by
     }
 
-    LOG_AUDIT {
+    PENYESUAIAN_STOK {
         uuid id PK
-        text kode UK "AUD-20261013-0001"
+        text kode UK "ADJ-20261013-0001"
         uuid cabang_id FK
-        uuid user_id FK
-        text aksi "CREATE | UPDATE | DELETE | TRANSFER | LOGIN"
-        text entitas "cabang | user_profile | barang | transfer_stok"
-        uuid entitas_id
-        jsonb rincian
+        timestamptz tanggal
+        text tipe_penyesuaian "saldo_awal | opname | koreksi"
+        text status "draft | selesai | dibatalkan"
+        text catatan
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
+    }
+
+    PENYESUAIAN_STOK_ITEM {
+        uuid id PK
+        text kode UK "ADI-0001"
+        uuid penyesuaian_stok_id FK
+        uuid produk_id FK
+        uuid satuan_produk_id FK
+        numeric stok_buku "dalam satuan dasar"
+        numeric stok_fisik "dalam satuan dasar"
+        numeric selisih "stok_fisik - stok_buku"
+        numeric harga_satuan "harga pokok satuan dasar"
+        numeric total_nilai_penyesuaian "selisih * harga_satuan"
+        text alasan
         timestamptz created_at
         timestamptz updated_at
         uuid created_by
@@ -262,7 +314,7 @@ erDiagram
 
     URUTAN_KODE {
         uuid id PK
-        text kode UK "BRG atau TRF-20261013"
+        text kode UK "PRD atau KST-20261013"
         text prefix
         text jenis "tanpa_reset | harian"
         date tanggal
@@ -274,16 +326,36 @@ erDiagram
 
 ---
 
-### 5.3. Generator Kode Otomatis & Sinkronisasi Sequence
+### 5.3. Rincian Konsep Produk & Multi-Satuan ala Accurate
 
-Untuk menjamin pembuatan kode bisnis yang unik, berurutan, aman dari *race condition* (*concurrency safe*), serta tidak pernah mundur meskipun ada data seed/import manual, diimplementasikan tabel `urutan_kode` dan dua fungsi PostgreSQL atomik:
+1. **Tipe Produk**:
+   - `persediaan` (*Inventory Part*): Produk fisik yang dibeli, disimpan, dan dijual. Setiap mutasi fisik wajib dicatat di `stok_produk` dan `kartu_stok`.
+   - `non_persediaan` (*Non-Inventory Part*): Produk fisik yang langsung dibeli untuk keperluan operasional/proyek tanpa perlu pelacakan saldo stok gudang.
+   - `jasa` (*Service*): Jasa atau layanan yang dijual/dibeli (misal: jasa instalasi, ongkos kirim, jasa perbaikan) tanpa stok fisik.
+   - `paket` (*Group / Bundle / Assembly*): Kumpulan dari beberapa barang persediaan dan/atau jasa. **Dinamis on-the-fly**: Paket tidak memiliki stok fisik mandiri di gudang; saat paket dikeluarkan/dijual, sistem memotong stok dari masing-masing `komponen_paket` secara otomatis sesuai resep.
+2. **Multi-Satuan Dinamis (`satuan_produk`)**:
+   - Setiap produk memiliki minimal 1 **Satuan Dasar** (`is_satuan_dasar = true`, `rasio_ke_dasar = 1`).
+   - Dapat ditambahkan satuan tingkat lebih tinggi (Satuan 2, Satuan 3, dst.):
+     - Contoh: Satuan Dasar = `Pcs` (rasio = 1), Satuan 2 = `Lusin` (rasio = 12), Satuan 3 = `Karton` (rasio = 144).
+   - Setiap satuan memiliki kolom barcode mandiri (`barcode`), harga jual default (`harga_jual_default`), dan tiering harga opsional (`harga_jual_grosir`, `harga_jual_member`).
+   - **Prinsip Inti Normalisasi**: Semua kuantitas pada tabel `stok_produk` dan perhitungan inti `kartu_stok` selalu dikonversi dan disimpan dalam **satuan dasar** untuk mencegah masalah pembulatan desimal.
+3. **Valuasi Ganda (Dual Valuation - Moving Average & FIFO)**:
+   - Kolom `metode_valuasi` pada tabel `produk` menentukan metode kalkulasi HPP:
+     - `rata_rata` (*Moving Average*): HPP rata-rata bergerak dihitung setiap kali ada barang masuk `(saldo_nilai_lama + total_nilai_masuk) / (sisa_kuantitas_lama + kuantitas_masuk)`.
+     - `fifo` (*First-In First-Out*): Menggunakan relasi `kartu_stok_masuk_id` dan `batch_nomor` untuk menyerap lapisan (*layers*) barang masuk yang paling awal dibeli.
+
+---
+
+### 5.4. Generator Kode Otomatis & Sinkronisasi Sequence
+
+Tabel `urutan_kode` dan dua fungsi atomik PostgreSQL:
 
 #### 1. Tabel `urutan_kode`
 ```sql
 CREATE TABLE IF NOT EXISTS urutan_kode (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    kode TEXT UNIQUE NOT NULL,               -- Kunci sekuens, misal: 'BRG' atau 'TRF-20261013'
-    prefix TEXT NOT NULL,                   -- Prefix kode, misal: 'BRG', 'TRF', 'CBG'
+    kode TEXT UNIQUE NOT NULL,               -- Kunci sequence: misal 'PRD' atau 'KST-20261013'
+    prefix TEXT NOT NULL,                   -- 'PRD', 'KST', 'ADJ', 'CBG', dll.
     jenis TEXT NOT NULL,                    -- 'tanpa_reset' | 'harian'
     tanggal DATE,                           -- Diisi jika jenis = 'harian', NULL jika 'tanpa_reset'
     nomor_terakhir BIGINT DEFAULT 0 NOT NULL,
@@ -295,10 +367,6 @@ CREATE INDEX IF NOT EXISTS idx_urutan_kode_kunci ON urutan_kode(kode);
 ```
 
 #### 2. Fungsi Atomik `buat_kode(prefix, panjang, jenis, tanggal)`
-Fungsi ini melakukan *atomic upsert* dengan locking baris bawaan PostgreSQL (`ON CONFLICT DO UPDATE`) untuk menghasilkan format:
-- **`tanpa_reset`**: `PREFIX-0001` (nomor urut terus berlanjut tanpa batas waktu).
-- **`harian`**: `PREFIX-YYYYMMDD-0001` (nomor urut otomatis reset kembali ke 1 setiap hari baru).
-
 ```sql
 CREATE OR REPLACE FUNCTION buat_kode(
     p_prefix TEXT,
@@ -315,12 +383,10 @@ DECLARE
     v_tanggal_str TEXT;
     v_hasil TEXT;
 BEGIN
-    -- Validasi jenis
     IF p_jenis NOT IN ('tanpa_reset', 'harian') THEN
         RAISE EXCEPTION 'Jenis kode tidak valid: %. Gunakan "tanpa_reset" atau "harian"', p_jenis;
     END IF;
 
-    -- Tentukan kunci unik urutan
     IF p_jenis = 'harian' THEN
         v_tanggal_str := to_char(p_tanggal, 'YYYYMMDD');
         v_kunci := p_prefix || '-' || v_tanggal_str;
@@ -329,7 +395,7 @@ BEGIN
         v_kunci := p_prefix;
     END IF;
 
-    -- Atomic Upsert & increment
+    -- Atomic Upsert & Increment
     INSERT INTO urutan_kode (kode, prefix, jenis, tanggal, nomor_terakhir, updated_at)
     VALUES (v_kunci, p_prefix, p_jenis, p_tanggal, 1, now())
     ON CONFLICT (kode)
@@ -338,7 +404,6 @@ BEGIN
         updated_at = now()
     RETURNING nomor_terakhir INTO v_nomor;
 
-    -- Format hasil kode
     IF p_jenis = 'harian' THEN
         v_hasil := p_prefix || '-' || v_tanggal_str || '-' || lpad(v_nomor::TEXT, p_panjang, '0');
     ELSE
@@ -351,8 +416,6 @@ $$;
 ```
 
 #### 3. Fungsi Sinkronisasi `sinkron_urutan_kode(...)`
-Fungsi ini membaca kode tertinggi yang telah ada pada tabel data (misal setelah proses seeding, migrasi, atau manual insert). Jika nomor tertinggi di tabel lebih besar dari `nomor_terakhir` pada `urutan_kode`, nilai di `urutan_kode` akan dimajukan secara otomatis sehingga **penomoran tidak akan pernah mundur atau menghasilkan kode duplikat**.
-
 ```sql
 CREATE OR REPLACE FUNCTION sinkron_urutan_kode(
     p_nama_tabel TEXT,
@@ -382,19 +445,16 @@ BEGIN
         v_pola_regex := '^' || p_prefix || '-([0-9]+)$';
     END IF;
 
-    -- Ambil nomor urut tertinggi yang ada di tabel tujuan menggunakan regex capture
     v_sql := format(
         'SELECT COALESCE(MAX((substring(%I from %L))::BIGINT), 0) FROM %I WHERE %I ~ %L',
         p_kolom_kode, v_pola_regex, p_nama_tabel, p_kolom_kode, v_pola_regex
     );
     EXECUTE v_sql INTO v_nomor_tertinggi;
 
-    -- Ambil nomor terakhir saat ini di tabel urutan_kode
     SELECT nomor_terakhir INTO v_nomor_sekarang
     FROM urutan_kode
     WHERE kode = v_kunci;
 
-    -- Sinkronisasi: nomor tidak boleh mundur
     IF v_nomor_sekarang IS NULL THEN
         INSERT INTO urutan_kode (kode, prefix, jenis, tanggal, nomor_terakhir, updated_at)
         VALUES (v_kunci, p_prefix, p_jenis, p_tanggal, v_nomor_tertinggi, now());
@@ -410,92 +470,40 @@ END;
 $$;
 ```
 
-#### 4. Trigger Otomatis untuk Kolom `kode`
-Setiap tabel dapat memanfaatkan default trigger `BEFORE INSERT` untuk mengisi kolom `kode` secara otomatis jika tidak disertakan:
-```sql
-CREATE OR REPLACE FUNCTION trg_set_kode_barang()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.kode IS NULL OR NEW.kode = '' THEN
-        NEW.kode := buat_kode('BRG', 4, 'tanpa_reset');
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_set_kode_barang
-BEFORE INSERT ON barang
-FOR EACH ROW EXECUTE FUNCTION trg_set_kode_barang();
-```
-
 ---
 
-### 5.4. Supabase Row-Level Security (RLS) Helper Functions
-1. `auth.is_superadmin()`:
-   ```sql
-   CREATE OR REPLACE FUNCTION auth.is_superadmin()
-   RETURNS BOOLEAN AS $$
-   BEGIN
-       RETURN EXISTS (
-           SELECT 1 FROM user_profile
-           WHERE id = auth.uid() AND role = 'superadmin' AND is_aktif = true AND deleted_at IS NULL
-       );
-   END;
-   $$ LANGUAGE plpgsql SECURITY DEFINER;
-   ```
-2. `auth.has_branch_access(target_cabang_id UUID)`:
-   ```sql
-   CREATE OR REPLACE FUNCTION auth.has_branch_access(target_cabang_id UUID)
-   RETURNS BOOLEAN AS $$
-   BEGIN
-       -- Superadmin & HQ Manager memiliki akses lintas cabang
-       IF EXISTS (
-           SELECT 1 FROM user_profile
-           WHERE id = auth.uid() AND role IN ('superadmin', 'hq_manager') AND is_aktif = true AND deleted_at IS NULL
-       ) THEN
-           RETURN true;
-       END IF;
-
-       -- Staf & Manajer Cabang dibatasi pada cabang yang terdaftar di user_cabang
-       RETURN EXISTS (
-           SELECT 1 FROM user_cabang uc
-           JOIN user_profile up ON up.id = uc.user_id
-           WHERE uc.user_id = auth.uid()
-             AND uc.cabang_id = target_cabang_id
-             AND up.is_aktif = true
-             AND uc.deleted_at IS NULL
-             AND up.deleted_at IS NULL
-       );
-   END;
-   $$ LANGUAGE plpgsql SECURITY DEFINER;
-   ```
-3. Filter soft-delete otomatis pada RLS: `deleted_at IS NULL`.
+### 5.5. Supabase Row-Level Security (RLS) Helper Functions
+1. `auth.is_superadmin()`: Mengembalikan `true` jika user adalah superadmin aktif.
+2. `auth.has_branch_access(target_cabang_id UUID)`: Mengembalikan `true` jika user memiliki hak akses ke cabang tersebut (Superadmin/HQ Manager selalu `true`, staf cabang sesuai `user_cabang`).
+3. Seluruh tabel transaksi & kartu stok diproteksi dengan `auth.has_branch_access(cabang_id)` dan `deleted_at IS NULL`.
 
 ---
 
 ## 6. Modul Bawaan Template (Starter Reference Modules)
 
 1. **Dashboard Ringkasan (*Overview*)**:
-   - Kartu KPI: Total Cabang Aktif, Nilai Total Stok, Mutasi Berstatus Menunggu, Peringatan Stok Minimum.
-   - Grafik distribusi inventaris per cabang dan riwayat mutasi bulanan.
+   - Kartu Metrik KPI: Total Produk Aktif, Total Nilai Persediaan Cabang Aktif, Peringatan Stok Minimum, Ringkasan Transaksi Opname.
+   - Grafik komposisi produk berdasarkan tipe dan status persediaan.
 2. **Manajemen Cabang & Gudang (`cabang`)**:
-   - Data Table dengan filter tipe (`pusat`, `cabang`, `gudang`) dan status aktif.
-   - Form Tambah/Edit Cabang: Kode otomatis (`CBG-0001`), alamat, kota, telepon, penanggung jawab.
+   - CRUD data cabang & gudang lengkap dengan tipe lokasi (`pusat`, `cabang`, `gudang`) dan status aktif.
 3. **Manajemen Pengguna & Penugasan (`user_profile` & `user_cabang`)**:
-   - Daftar staf dengan kode pengguna (`USR-0001`), badge role, dan chip multi-cabang.
-   - Dialog undangan/tambah user baru dengan penetapan cabang default dan cabang tambahan.
-4. **Katalog Barang & Inventaris (`barang` & `stok_barang`)**:
-   - Master Barang: Kode (`BRG-0001`), nama, kategori, satuan, harga beli/jual, batas minimum stok.
-   - Rincian Stok Cabang: Menampilkan jumlah fisik, jumlah tersedia, dan jumlah tertahan per cabang aktif.
-5. **Mutasi & Transfer Stok Antar Cabang (`transfer_stok`)**:
-   - Kode mutasi harian (`TRF-20261013-0001`).
-   - Alur status: `draft` -> `menunggu` -> `dalam_pengiriman` -> `diterima` (atau `ditolak`).
-   - Validasi otomatis: Mengurangi `jumlah_tersedia` di cabang asal dan menambah `jumlah` di cabang tujuan saat diterima.
-6. **Log Audit & Jejak Aktivitas (`log_audit`)**:
-   - Kode audit harian (`AUD-20261013-0001`).
-   - Pelacakan otomatis setiap aksi create, update, soft delete, transfer, dan login.
-7. **Pengaturan Organisasi (`organisasi`)**:
-   - Profil entitas perusahaan, logo, kontak, preferensi mata uang (IDR default), dan pengaturan sistem.
+   - Kelola staf dan administrator, penugasan role (Superadmin, HQ Manager, Branch Manager, Staff, Viewer), dan multi-cabang.
+4. **Master Data Produk & Multi-Satuan (`produk`, `satuan_produk`, `komponen_paket`)**:
+   - **Tipe Produk**: Persediaan, Non-Persediaan, Jasa, Paket.
+   - **Multi-Satuan**: Pengaturan Satuan Dasar + Satuan Tambahan dengan rasio pengali, barcode, dan harga jual default.
+   - **Komponen Paket**: UI pemilihan komponen barang persediaan/jasa dan kuantitas penyusun paket.
+   - **Saldo Awal Cabang**: Form pengisian saldo awal per cabang langsung saat pembuatan produk persediaan baru.
+5. **Kartu Stok / *Stock Ledger* (`kartu_stok`)**:
+   - Buku besar mutasi stok pergerakan barang per cabang dan per produk.
+   - Kolom lengkap: Tanggal, Jenis Mutasi, No. Referensi, Satuan Transaksi, Masuk, Keluar, Saldo Kuantitas, Harga Satuan, Masuk (Rp), Keluar (Rp), Saldo Nilai (Rp), HPP Rata-rata.
+   - Filter tanggal, filter jenis transaksi, pencarian nomor referensi, dan tombol export Excel/PDF.
+6. **Penyesuaian Stok / *Stock Opname* (`penyesuaian_stok` & `penyesuaian_stok_item`)**:
+   - Form pencatatan stok fisik vs stok sistem per cabang.
+   - Otomatis mencatat selisih ke `kartu_stok` (`penyesuaian_masuk` jika lebih, `penyesuaian_keluar` jika kurang) dan memperbarui saldo `stok_produk`.
+7. **Log Audit & Jejak Aktivitas (`log_audit`)**:
+   - Pelacakan audit trail otomatis untuk seluruh operasi create, update, soft-delete, dan penyesuaian stok.
+8. **Pengaturan Organisasi (`organisasi`)**:
+   - Profil perusahaan, logo, kontak, preferensi mata uang (IDR), dan toggle tema Light/Dark.
 
 ---
 
@@ -518,8 +526,15 @@ zeropoint/
 │   │   │   ├── page.tsx               # Overview dashboard
 │   │   │   ├── cabang/                # Modul Manajemen Cabang & Gudang
 │   │   │   ├── user/                  # Modul Manajemen User & Hak Akses
-│   │   │   ├── barang/                # Modul Stok & Master Barang
-│   │   │   ├── transfer-stok/         # Modul Mutasi Antar Cabang
+│   │   │   ├── produk/                # Modul Master Data Produk & Multi-Satuan
+│   │   │   │   ├── page.tsx           # Tabel Produk
+│   │   │   │   ├── baru/page.tsx      # Form Tambah Produk (Multi-tab: Umum, Satuan, Paket, Saldo Awal)
+│   │   │   │   └── [id]/page.tsx      # Detail & Edit Produk
+│   │   │   ├── kartu-stok/            # Modul Buku Besar Kartu Stok
+│   │   │   │   └── page.tsx           # Laporan Kartu Stok per Cabang & Produk
+│   │   │   ├── penyesuaian-stok/      # Modul Stock Opname & Penyesuaian
+│   │   │   │   ├── page.tsx           # Daftar Penyesuaian Stok
+│   │   │   │   └── baru/page.tsx      # Form Input Stock Opname
 │   │   │   ├── log-audit/             # Modul Log Aktivitas
 │   │   │   └── pengaturan/            # Modul Pengaturan Organisasi
 │   │   ├── api/                       # Webhooks / Auth callbacks
@@ -532,6 +547,8 @@ zeropoint/
 │   │   │   ├── branch-switcher.tsx    # Dropdown ganti cabang aktif di sidebar
 │   │   │   ├── header-nav.tsx         # Breadcrumbs, quick actions, theme toggle
 │   │   │   └── user-nav.tsx           # Avatar dropdown & logout
+│   │   ├── produk/                    # Komponen khusus produk (satuan-form, komponen-paket-table)
+│   │   ├── kartu-stok/                # Komponen tabel kartu stok & ledger filter
 │   │   └── shared/                    # Data-table, confirm dialog, empty state
 │   ├── hooks/
 │   │   ├── use-active-branch.ts       # Hook akses cabang aktif
@@ -544,15 +561,15 @@ zeropoint/
 │   │   ├── i18n/                      # Dictionary bahasa (ID / EN)
 │   │   └── utils.ts
 │   ├── server/
-│   │   ├── actions/                   # Server Actions terisolasi (cabang, user, barang, transfer)
+│   │   ├── actions/                   # Server Actions (produk, satuan, kartu-stok, opname)
 │   │   └── queries/                   # Database queries terisolasi
 │   └── types/
 │       ├── database.types.ts          # Generated types Supabase
 │       └── index.ts
 ├── supabase/
 │   ├── migrations/                    # File migrasi SQL Supabase
-│   │   └── 20261013000000_skema_dasar_multicabang.sql
-│   └── seed.sql                       # Data inisialisasi awal & pemicu sinkronisasi kode
+│   │   └── 20261013000000_skema_produk_dan_kartu_stok.sql
+│   └── seed.sql                       # Data inisialisasi awal (Superadmin, demo cabang, produk multi-satuan, saldo awal kartu stok)
 ├── tests/                             # Vitest unit test
 ├── package.json
 ├── pnpm-lock.yaml
@@ -567,24 +584,20 @@ zeropoint/
 1. **Tahap 1: Inisialisasi Proyek & UI Foundation**:
    - Jalankan `pnpm dlx shadcn@latest init --preset b7BFgU2rI --template next`.
    - Pasang blok sidebar: `npx shadcn@latest add sidebar-07`.
-   - Pasang komponen UI esensial shadcn: `button`, `dialog`, `dropdown-menu`, `input`, `select`, `table`, `badge`, `card`, `avatar`, `tabs`, `sonner`.
+   - Pasang komponen UI esensial: `button`, `dialog`, `dropdown-menu`, `input`, `select`, `table`, `badge`, `card`, `avatar`, `tabs`, `sonner`.
 2. **Tahap 2: Setup Database & Supabase Integration**:
-   - Buat file migrasi `supabase/migrations/20261013000000_skema_dasar_multicabang.sql` berisi:
+   - Buat file migrasi `supabase/migrations/20261013000000_skema_produk_dan_kartu_stok.sql` berisi:
      - Tabel `urutan_kode`, fungsi `buat_kode`, dan fungsi `sinkron_urutan_kode`.
-     - Tabel `organisasi`, `cabang`, `user_profile`, `user_cabang`, `barang`, `stok_barang`, `transfer_stok`, `log_audit`.
-     - 6 Kolom sistem (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`) dan trigger `updated_at`.
-     - Kebijakan Supabase Row-Level Security (RLS).
-   - Buat `supabase/seed.sql` berisi akun default Superadmin (`admin@zeropoint.com`), cabang demo (`HQ-0001`, `CBG-0001`, `GDG-0001`), master barang dummy, dan eksekusi `sinkron_urutan_kode` di akhir seed.
-   - Konfigurasi `@supabase/ssr` dengan pembacaan cookie `zeropoint_active_branch_id`.
-3. **Tahap 3: Implementasi Shell Dashboard & Branch Switcher**:
-   - Integrasikan `BranchSwitcher` di header `sidebar-07` dengan sinkronisasi cookie server action.
-4. **Tahap 4: Implementasi Modul-Modul Bawaan**:
-   - Halaman Cabang & Gudang (`/cabang`)
-   - Halaman Pengguna & Hak Akses (`/user`)
-   - Halaman Inventaris & Stok (`/barang`)
-   - Halaman Mutasi Antar Cabang (`/transfer-stok`)
-   - Halaman Log Audit (`/log-audit`) & Pengaturan (`/pengaturan`)
+     - Tabel `organisasi`, `cabang`, `user_profile`, `user_cabang`, `kategori_produk`, `produk`, `satuan_produk`, `komponen_paket`, `stok_produk`, `kartu_stok`, `penyesuaian_stok`, `penyesuaian_stok_item`, `log_audit`.
+     - Kolom sistem & RLS functions.
+   - Buat `supabase/seed.sql` berisi demo cabang, kategori produk, produk persediaan dengan multi-satuan (contoh: Indomie Goreng dengan satuan Pcs, Dus rasio 40), produk jasa, produk paket, dan saldo awal kartu stok.
+3. **Tahap 3: Shell Dashboard & Branch Switcher**:
+   - Sesuaikan `sidebar-07` dengan `BranchSwitcher` dan sinkronisasi cookie `zeropoint_active_branch_id`.
+4. **Tahap 4: Implementasi Modul Produk & Persediaan**:
+   - Modul Master Produk (`/produk`): Form multi-tab (Data Dasar, Multi-Satuan, Komponen Paket, Saldo Awal per Cabang).
+   - Modul Kartu Stok (`/kartu-stok`): Buku besar persediaan interaktif dengan running balance kuantitas dan nilai rupiah.
+   - Modul Penyesuaian Stok (`/penyesuaian-stok`): Stock opname dan koreksi stok.
+   - Modul Cabang, Pengguna, Audit Log, dan Pengaturan.
 5. **Tahap 5: Kualitas & DX**:
-   - Unit test generator kode & branch scoping dengan Vitest.
-   - Konfigurasi ESLint & Prettier.
-   - GitHub Actions CI workflow.
+   - Unit test konversi satuan, kalkulasi kartu stok (Moving Average & FIFO), dan generator kode dengan Vitest.
+   - CI Workflow & Dokumentasi lengkap di `README.md`.
