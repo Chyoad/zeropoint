@@ -50,10 +50,12 @@ CREATE OR REPLACE FUNCTION buat_kode(
 ) RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_kunci TEXT;
     v_nomor BIGINT;
+    v_nomor_str TEXT;
     v_tanggal_str TEXT;
     v_hasil TEXT;
 BEGIN
@@ -78,10 +80,12 @@ BEGIN
         updated_at = now()
     RETURNING nomor_terakhir INTO v_nomor;
 
+    v_nomor_str := CASE WHEN length(v_nomor::TEXT) >= p_panjang THEN v_nomor::TEXT ELSE lpad(v_nomor::TEXT, p_panjang, '0') END;
+
     IF p_jenis = 'harian' THEN
-        v_hasil := p_prefix || '-' || v_tanggal_str || '-' || lpad(v_nomor::TEXT, p_panjang, '0');
+        v_hasil := p_prefix || '-' || v_tanggal_str || '-' || v_nomor_str;
     ELSE
-        v_hasil := p_prefix || '-' || lpad(v_nomor::TEXT, p_panjang, '0');
+        v_hasil := p_prefix || '-' || v_nomor_str;
     END IF;
 
     RETURN v_hasil;
@@ -98,6 +102,7 @@ CREATE OR REPLACE FUNCTION sinkron_urutan_kode(
 ) RETURNS BIGINT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_kunci TEXT;
@@ -576,6 +581,32 @@ BEGIN
 END;
 $$;
 
+-- Helper untuk mendapatkan ID Organisasi pengguna aktif tanpa self-recursion di RLS
+CREATE OR REPLACE FUNCTION auth.get_user_organization_id()
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+DECLARE
+    v_org_id UUID;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT organisasi_id INTO v_org_id
+    FROM user_profile
+    WHERE user_id = auth.uid()
+      AND is_aktif = true
+      AND deleted_at IS NULL
+    LIMIT 1;
+
+    RETURN v_org_id;
+END;
+$$;
+
 -- Alias fungsi pada skema public untuk kemudahan pemanggilan
 CREATE OR REPLACE FUNCTION public.is_superadmin()
 RETURNS BOOLEAN
@@ -591,6 +622,14 @@ LANGUAGE sql
 STABLE
 AS $$
     SELECT auth.has_branch_access(target_cabang_id);
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_user_organization_id()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT auth.get_user_organization_id();
 $$;
 
 -- ==============================================================================
@@ -640,12 +679,11 @@ CREATE POLICY "cabang_modify_policy" ON cabang
 CREATE POLICY "user_profile_select_policy" ON user_profile
     FOR SELECT TO authenticated
     USING (
-        (auth.uid() = user_id OR auth.is_superadmin() OR EXISTS (
-            SELECT 1 FROM user_profile me
-            WHERE me.user_id = auth.uid()
-              AND me.organisasi_id = user_profile.organisasi_id
-              AND me.deleted_at IS NULL
-        ))
+        (
+            auth.uid() = user_id
+            OR auth.is_superadmin()
+            OR organisasi_id = auth.get_user_organization_id()
+        )
         AND deleted_at IS NULL
     );
 CREATE POLICY "user_profile_modify_policy" ON user_profile

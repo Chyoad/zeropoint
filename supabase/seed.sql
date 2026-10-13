@@ -52,6 +52,15 @@ VALUES
     )
 ON CONFLICT (id) DO NOTHING;
 
+-- 2.5 Inisialisasi Pengguna auth.users Supabase
+INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+VALUES
+    ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@zeropoint.local', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"name":"Superadmin Direksi"}', now(), now()),
+    ('a0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'manager.hq@zeropoint.local', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"name":"Budi Santoso"}', now(), now()),
+    ('a0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'bm.sby@zeropoint.local', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"name":"Siti Rahayu"}', now(), now()),
+    ('a0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'staff.ckr@zeropoint.local', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"name":"Ahmad Fauzi"}', now(), now())
+ON CONFLICT (id) DO NOTHING;
+
 -- 3. Inisialisasi Pengguna Awal (Superadmin, HQ Manager, Branch Manager, Staff Gudang)
 INSERT INTO user_profile (id, kode, organisasi_id, user_id, email, nama_lengkap, role, is_aktif)
 VALUES

@@ -112,17 +112,19 @@ describe('Supabase Database Schema & Migration Verification', () => {
     }
   })
 
-  it('defines atomic code generator and sequence sync functions', () => {
+  it('defines atomic code generator and sequence sync functions with search_path', () => {
     const content = fs.readFileSync(migrationPath, 'utf-8')
     expect(content).toContain('CREATE OR REPLACE FUNCTION buat_kode(')
     expect(content).toContain('CREATE OR REPLACE FUNCTION sinkron_urutan_kode(')
     expect(content).toContain('CREATE OR REPLACE FUNCTION set_updated_at()')
+    expect(content).toContain('v_nomor_str := CASE WHEN length(v_nomor::TEXT) >= p_panjang THEN v_nomor::TEXT ELSE lpad(v_nomor::TEXT, p_panjang, \'0\') END;')
   })
 
-  it('defines RLS helper functions auth.is_superadmin and auth.has_branch_access', () => {
+  it('defines RLS helper functions auth.is_superadmin, auth.has_branch_access, and auth.get_user_organization_id', () => {
     const content = fs.readFileSync(migrationPath, 'utf-8')
     expect(content).toContain('CREATE OR REPLACE FUNCTION auth.is_superadmin()')
     expect(content).toContain('CREATE OR REPLACE FUNCTION auth.has_branch_access(target_cabang_id UUID)')
+    expect(content).toContain('CREATE OR REPLACE FUNCTION auth.get_user_organization_id()')
   })
 
   it('enables Row Level Security on all public tables', () => {
@@ -156,6 +158,10 @@ describe('Supabase Seed Data Verification', () => {
   it('verifies seed.sql exists and contains required seed records', () => {
     expect(fs.existsSync(seedPath)).toBe(true)
     const content = fs.readFileSync(seedPath, 'utf-8')
+
+    // 0. auth.users seeding
+    expect(content).toContain('INSERT INTO auth.users')
+    expect(content).toContain('a0000000-0000-0000-0000-000000000001')
 
     // 1. Organisasi ORG-0001
     expect(content).toContain('ORG-0001')

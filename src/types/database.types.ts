@@ -998,6 +998,10 @@ export interface Database {
         }
         Returns: boolean
       }
+      get_user_organization_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string | null
+      }
     }
     Enums: {
       tipe_cabang: TipeCabang
