@@ -85,15 +85,15 @@
 **Interfaces:**
 - Produces: `konversiKeSatuanDasar(kuantitas: number, rasioKeDasar: number): number` dan `konversiDariSatuanDasar(kuantitasDasar: number, rasioKeDasar: number): number`.
 
-- [ ] **Step 1: Pasang dev dependencies Vitest**
+- [x] **Step 1: Pasang dev dependencies Vitest**
   ```bash
   pnpm add -D vitest @testing-library/react @testing-library/jest-dom jsdom
   ```
 
-- [ ] **Step 2: Buat konfigurasi `vitest.config.ts`**
+- [x] **Step 2: Buat konfigurasi `vitest.config.ts`**
   Konfigurasi vitest dengan environment jsdom dan alias path `@/*`.
 
-- [ ] **Step 3: Tulis failing test di `tests/konversi-satuan.test.ts`**
+- [x] **Step 3: Tulis failing test di `tests/konversi-satuan.test.ts`**
   ```typescript
   import { describe, it, expect } from "vitest";
   import { konversiKeSatuanDasar, konversiDariSatuanDasar } from "@/lib/konversi-satuan";
@@ -117,20 +117,20 @@
   });
   ```
 
-- [ ] **Step 4: Jalankan test untuk memastikan test gagal (FAIL)**
+- [x] **Step 4: Jalankan test untuk memastikan test gagal (FAIL)**
   ```bash
   pnpm vitest run tests/konversi-satuan.test.ts
   ```
 
-- [ ] **Step 5: Implementasikan `src/lib/konversi-satuan.ts`**
+- [x] **Step 5: Implementasikan `src/lib/konversi-satuan.ts`**
   Implementasikan logika konversi dengan validasi rasio positif.
 
-- [ ] **Step 6: Jalankan test dan pastikan lulus (PASS)**
+- [x] **Step 6: Jalankan test dan pastikan lulus (PASS)**
   ```bash
   pnpm vitest run tests/konversi-satuan.test.ts
   ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
   ```bash
   git add vitest.config.ts tests/ src/lib/konversi-satuan.ts
   git commit -m "feat: setup vitest and unit tests for multi-unit conversion"
