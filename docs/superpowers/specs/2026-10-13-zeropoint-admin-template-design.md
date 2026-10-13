@@ -13,8 +13,9 @@ Fokus utama perancangan tahap ini diarahkan pada **Master Data Produk & Persedia
 | :--- | :--- | :--- |
 | **Framework** | Next.js (App Router) | React Server Components (RSC), Server Actions, Route Handlers |
 | **Bahasa & Validasi** | TypeScript & Zod | *End-to-end type safety*, skema validasi form & server action |
-| **UI Library** | shadcn/ui | Inisialisasi: `pnpm dlx shadcn@latest init --preset b7BFgU2rI --template next`<br/>Sidebar: `npx shadcn@latest add sidebar-07` |
-| **Styling & Tema** | Tailwind CSS v4 & Lucide Icons | Dark/Light mode support dengan `next-themes` |
+| **UI Library** | shadcn/ui | Inisialisasi: `pnpm dlx shadcn@latest init --preset b7BFgU2rI --template next --rtl --pointer`<br/>Sidebar: `npx shadcn@latest add sidebar-07` |
+| **Tipografi & Ikon** | Font Outfit & Hugeicons | Font: `Outfit` via `next/font/google`<br/>Ikon: `@hugeicons/react` (Stroke / Outline Rounded 1.5px) di seluruh antarmuka dan blok sidebar-07 |
+| **Styling & Arah Teks** | Tailwind CSS v4 & RTL-Ready | Dark/Light mode (`next-themes`), LTR default dengan utilitas RTL-ready, cursor pointer styling aktif |
 | **Backend & DB** | Supabase | PostgreSQL, Supabase Auth, Row-Level Security (RLS), Storage |
 | **Supabase Client** | `@supabase/ssr` | Session handling aman via cookies di Server Components, Server Actions, dan Middleware |
 | **Data Tables** | TanStack Table | Sorting, filtering, paginasi, density switch, dan export |
@@ -582,9 +583,13 @@ zeropoint/
 ## 8. Alur Implementasi (Execution Blueprint)
 
 1. **Tahap 1: Inisialisasi Proyek & UI Foundation**:
-   - Jalankan `pnpm dlx shadcn@latest init --preset b7BFgU2rI --template next`.
+   - Jalankan perintah inisialisasi: `pnpm dlx shadcn@latest init --preset b7BFgU2rI --template next --rtl --pointer`.
+   - Pastikan konfigurasi `components.json` menyertakan `iconLibrary: "hugeicons"`.
+   - Pasang dependensi ikon: `pnpm add @hugeicons/react`.
+   - Konfigurasi font `Outfit` di `src/app/layout.tsx` menggunakan `next/font/google` dan mapping variabel CSS `--font-sans: var(--font-outfit)`.
    - Pasang blok sidebar: `npx shadcn@latest add sidebar-07`.
-   - Pasang komponen UI esensial: `button`, `dialog`, `dropdown-menu`, `input`, `select`, `table`, `badge`, `card`, `avatar`, `tabs`, `sonner`.
+   - Lakukan migrasi ikon pada komponen `sidebar-07` dan komponen bawaan shadcn dari Lucide ke `@hugeicons/react` (Stroke / Outline Rounded 1.5px).
+   - Pasang komponen UI esensial: `button`, `dialog`, `dropdown-menu`, `input`, `select`, `table`, `badge`, `card`, `avatar`, `tabs`, `sonner`, `tooltip`.
 2. **Tahap 2: Setup Database & Supabase Integration**:
    - Buat file migrasi `supabase/migrations/20261013000000_skema_produk_dan_kartu_stok.sql` berisi:
      - Tabel `urutan_kode`, fungsi `buat_kode`, dan fungsi `sinkron_urutan_kode`.
