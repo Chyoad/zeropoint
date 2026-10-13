@@ -6,6 +6,7 @@
 Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem internal perusahaan:
 - **Isolasi dan Scoping Data Antar Cabang**: Data transaksi, stok, dan operasional otomatis terfilter berdasarkan cabang/gudang yang sedang aktif.
 - **Hierarki Akses & Keamanan Bertingkat**: Superadmin/HQ memiliki akses menyeluruh ke semua cabang, sedangkan staf operasional terkunci pada cabang yang ditugaskan.
+- **Standar Skema Database Konsisten**: Mengikuti aturan penamaan Bahasa Indonesia dalam format *snake_case* tunggal, kode bisnis human-readable otomatis, dan jejak audit/soft-delete menyeluruh.
 - **Fondasi Siap Pakai (*Turnkey Architecture*)**: Dilengkapi modul dasar esensial (Cabang, Pengguna & Hak Akses, Inventaris & Mutasi Stok, Audit Trail, Pengaturan Organisasi) sebagai referensi standar implementasi modul bisnis apa pun di masa mendatang.
 
 ---
@@ -81,135 +82,420 @@ Template ini dirancang untuk menyelesaikan tantangan arsitektur umum pada sistem
    - Akses *read-only* (hanya lihat) untuk audit data dan pelaporan.
 
 ### 4.2. Model Relasi Akses Pengguna ke Cabang
-- Seorang pengguna dapat ditugaskan ke satu atau beberapa cabang melalui tabel relasi `user_branches`.
+- Pengguna ditugaskan ke satu atau beberapa cabang melalui tabel relasi `user_cabang`.
 - Superadmin secara otomatis memiliki hak akses ke semua cabang (`is_superadmin = true`).
 
 ---
 
-## 5. Skema Database & Supabase RLS
+## 5. Konvensi & Skema Database Supabase
 
-### 5.1. Entitas Inti
+### 5.1. Aturan Baku Database (*Database Conventions*)
+1. **Bahasa & Nomenklatur**:
+   - Nama tabel dan kolom menggunakan **Bahasa Indonesia**, format **`snake_case`**, dan **bentuk tunggal (singular)** (contoh: `organisasi`, `cabang`, `barang`, `stok_barang`, `transfer_stok`, `log_audit`, `urutan_kode`).
+   - **Pengecualian**: Istilah teknis standar seperti `user` (contoh: `user_profile`, `user_cabang`, `user_id`, `role`, `email`, `avatar_url`) dan kolom sistem baku.
+2. **Kunci Primer (Primary Key)**:
+   - Setiap tabel wajib memiliki kolom `id` bertipe `UUID PRIMARY KEY DEFAULT gen_random_uuid()`.
+3. **Kode Bisnis Unik (*Human-Readable Code*)**:
+   - Setiap tabel wajib memiliki kolom `kode` bertipe `TEXT UNIQUE NOT NULL` sebagai identitas bisnis yang mudah dibaca pengguna (misalnya: `ORG-0001`, `CBG-0001`, `BRG-0001`, `TRF-20261013-0001`).
+4. **Konvensi Relasi (Foreign Key)**:
+   - Semua relasi foreign key menggunakan format **`<tabel>_id`** bertipe `UUID` (contoh: `organisasi_id`, `cabang_id`, `barang_id`, `user_id`).
+   - Untuk relasi ganda ke tabel yang sama, gunakan peran yang jelas dengan akhiran `_id` (contoh: `cabang_asal_id`, `cabang_tujuan_id`, `diajukan_oleh_id`).
+5. **Kolom Sistem Wajib (*Audit & Soft Delete*)**:
+   - Setiap tabel operasional wajib memiliki 6 kolom sistem:
+     - `created_at TIMESTAMPTZ DEFAULT now() NOT NULL`
+     - `updated_at TIMESTAMPTZ DEFAULT now() NOT NULL`
+     - `created_by UUID REFERENCES auth.users(id)`
+     - `updated_by UUID REFERENCES auth.users(id)`
+     - `deleted_at TIMESTAMPTZ` (penanda soft delete; null berarti aktif)
+     - `deleted_by UUID REFERENCES auth.users(id)`
+
+---
+
+### 5.2. Entity Relationship Diagram (ERD)
+
 ```mermaid
 erDiagram
-    ORGANIZATIONS ||--o{ BRANCHES : owns
-    BRANCHES ||--o{ USER_BRANCHES : assigns
-    USER_PROFILES ||--o{ USER_BRANCHES : has
-    USER_PROFILES ||--o{ AUDIT_LOGS : performs
-    BRANCHES ||--o{ ITEM_STOCKS : holds
-    ITEMS ||--o{ ITEM_STOCKS : tracks
-    BRANCHES ||--o{ STOCK_TRANSFERS : origin_destination
-    ITEMS ||--o{ STOCK_TRANSFERS : transfers
+    ORGANISASI ||--o{ CABANG : memiliki
+    ORGANISASI ||--o{ USER_PROFILE : memiliki
+    CABANG ||--o{ USER_CABANG : ditugaskan
+    USER_PROFILE ||--o{ USER_CABANG : memiliki
+    USER_PROFILE ||--o{ LOG_AUDIT : melakukan
+    CABANG ||--o{ LOG_AUDIT : mencatat
+    CABANG ||--o{ STOK_BARANG : menyimpan
+    BARANG ||--o{ STOK_BARANG : dicatat_di
+    CABANG ||--o{ TRANSFER_STOK : asal_tujuan
+    BARANG ||--o{ TRANSFER_STOK : dipindahkan
 
-    ORGANIZATIONS {
+    ORGANISASI {
         uuid id PK
-        text name
-        text code
+        text kode UK "ORG-0001"
+        text nama
         text logo_url
-        jsonb settings
+        jsonb pengaturan
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    BRANCHES {
+    CABANG {
         uuid id PK
-        uuid organization_id FK
-        text name
-        text code
-        text type "hq | branch | warehouse"
-        text address
-        text city
-        text phone
-        boolean is_active
-        timestamp created_at
+        text kode UK "CBG-0001"
+        uuid organisasi_id FK
+        text nama
+        text tipe "pusat | cabang | gudang"
+        text alamat
+        text kota
+        text telepon
+        boolean is_aktif
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    USER_PROFILES {
+    USER_PROFILE {
         uuid id PK "references auth.users"
-        text full_name
+        text kode UK "USR-0001"
+        uuid organisasi_id FK
+        text nama_lengkap
         text email
         text role "superadmin | hq_manager | branch_manager | staff | viewer"
         text avatar_url
-        boolean is_active
+        boolean is_aktif
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    USER_BRANCHES {
+    USER_CABANG {
         uuid id PK
+        text kode UK "UCB-0001"
         uuid user_id FK
-        uuid branch_id FK
+        uuid cabang_id FK
         boolean is_default
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    ITEMS {
+    BARANG {
         uuid id PK
-        uuid organization_id FK
-        text sku
-        text name
-        text category
-        text unit "pcs | box | kg"
-        numeric min_stock_alert
-        boolean is_active
+        text kode UK "BRG-0001"
+        uuid organisasi_id FK
+        text nama
+        text kategori
+        text satuan "pcs | box | kg"
+        numeric harga_beli
+        numeric harga_jual
+        numeric peringatan_stok_minimum
+        boolean is_aktif
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    ITEM_STOCKS {
+    STOK_BARANG {
         uuid id PK
-        uuid item_id FK
-        uuid branch_id FK
-        numeric quantity
-        numeric reserved_quantity
-        timestamp updated_at
+        text kode UK "STK-0001"
+        uuid barang_id FK
+        uuid cabang_id FK
+        numeric jumlah
+        numeric jumlah_tersedia
+        numeric jumlah_tertahan
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    STOCK_TRANSFERS {
+    TRANSFER_STOK {
         uuid id PK
-        text transfer_number
-        uuid from_branch_id FK
-        uuid to_branch_id FK
-        uuid item_id FK
-        numeric quantity
-        text status "draft | pending | in_transit | received | rejected"
-        uuid requested_by FK
-        uuid approved_by FK
-        text notes
-        timestamp created_at
+        text kode UK "TRF-20261013-0001"
+        uuid cabang_asal_id FK
+        uuid cabang_tujuan_id FK
+        uuid barang_id FK
+        numeric jumlah
+        text status "draft | menunggu | dalam_pengiriman | diterima | ditolak"
+        uuid diajukan_oleh_id FK
+        uuid disetujui_oleh_id FK
+        text catatan
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
     }
 
-    AUDIT_LOGS {
+    LOG_AUDIT {
         uuid id PK
-        uuid branch_id FK
+        text kode UK "AUD-20261013-0001"
+        uuid cabang_id FK
         uuid user_id FK
-        text action "CREATE | UPDATE | DELETE | TRANSFER"
-        text entity "branches | users | items | stocks"
-        jsonb details
-        timestamp created_at
+        text aksi "CREATE | UPDATE | DELETE | TRANSFER | LOGIN"
+        text entitas "cabang | user_profile | barang | transfer_stok"
+        uuid entitas_id
+        jsonb rincian
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by
+        uuid updated_by
+        timestamptz deleted_at
+        uuid deleted_by
+    }
+
+    URUTAN_KODE {
+        uuid id PK
+        text kode UK "BRG atau TRF-20261013"
+        text prefix
+        text jenis "tanpa_reset | harian"
+        date tanggal
+        bigint nomor_terakhir
+        timestamptz created_at
+        timestamptz updated_at
     }
 ```
 
-### 5.2. Supabase Row-Level Security (RLS) Helper Functions
-- `auth.is_superadmin()`: Mengembalikan `true` jika user adalah Superadmin.
-- `auth.has_branch_access(target_branch_id uuid)`: Mengembalikan `true` jika user adalah Superadmin, atau memiliki record di `user_branches` untuk cabang tersebut.
-- Setiap tabel transaksi/stok dilindungi dengan kebijakan `USING (auth.has_branch_access(branch_id))`.
+---
+
+### 5.3. Generator Kode Otomatis & Sinkronisasi Sequence
+
+Untuk menjamin pembuatan kode bisnis yang unik, berurutan, aman dari *race condition* (*concurrency safe*), serta tidak pernah mundur meskipun ada data seed/import manual, diimplementasikan tabel `urutan_kode` dan dua fungsi PostgreSQL atomik:
+
+#### 1. Tabel `urutan_kode`
+```sql
+CREATE TABLE IF NOT EXISTS urutan_kode (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kode TEXT UNIQUE NOT NULL,               -- Kunci sekuens, misal: 'BRG' atau 'TRF-20261013'
+    prefix TEXT NOT NULL,                   -- Prefix kode, misal: 'BRG', 'TRF', 'CBG'
+    jenis TEXT NOT NULL,                    -- 'tanpa_reset' | 'harian'
+    tanggal DATE,                           -- Diisi jika jenis = 'harian', NULL jika 'tanpa_reset'
+    nomor_terakhir BIGINT DEFAULT 0 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_urutan_kode_kunci ON urutan_kode(kode);
+```
+
+#### 2. Fungsi Atomik `buat_kode(prefix, panjang, jenis, tanggal)`
+Fungsi ini melakukan *atomic upsert* dengan locking baris bawaan PostgreSQL (`ON CONFLICT DO UPDATE`) untuk menghasilkan format:
+- **`tanpa_reset`**: `PREFIX-0001` (nomor urut terus berlanjut tanpa batas waktu).
+- **`harian`**: `PREFIX-YYYYMMDD-0001` (nomor urut otomatis reset kembali ke 1 setiap hari baru).
+
+```sql
+CREATE OR REPLACE FUNCTION buat_kode(
+    p_prefix TEXT,
+    p_panjang INT DEFAULT 4,
+    p_jenis TEXT DEFAULT 'tanpa_reset',
+    p_tanggal DATE DEFAULT CURRENT_DATE
+) RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_kunci TEXT;
+    v_nomor BIGINT;
+    v_tanggal_str TEXT;
+    v_hasil TEXT;
+BEGIN
+    -- Validasi jenis
+    IF p_jenis NOT IN ('tanpa_reset', 'harian') THEN
+        RAISE EXCEPTION 'Jenis kode tidak valid: %. Gunakan "tanpa_reset" atau "harian"', p_jenis;
+    END IF;
+
+    -- Tentukan kunci unik urutan
+    IF p_jenis = 'harian' THEN
+        v_tanggal_str := to_char(p_tanggal, 'YYYYMMDD');
+        v_kunci := p_prefix || '-' || v_tanggal_str;
+    ELSE
+        v_tanggal_str := NULL;
+        v_kunci := p_prefix;
+    END IF;
+
+    -- Atomic Upsert & increment
+    INSERT INTO urutan_kode (kode, prefix, jenis, tanggal, nomor_terakhir, updated_at)
+    VALUES (v_kunci, p_prefix, p_jenis, p_tanggal, 1, now())
+    ON CONFLICT (kode)
+    DO UPDATE SET
+        nomor_terakhir = urutan_kode.nomor_terakhir + 1,
+        updated_at = now()
+    RETURNING nomor_terakhir INTO v_nomor;
+
+    -- Format hasil kode
+    IF p_jenis = 'harian' THEN
+        v_hasil := p_prefix || '-' || v_tanggal_str || '-' || lpad(v_nomor::TEXT, p_panjang, '0');
+    ELSE
+        v_hasil := p_prefix || '-' || lpad(v_nomor::TEXT, p_panjang, '0');
+    END IF;
+
+    RETURN v_hasil;
+END;
+$$;
+```
+
+#### 3. Fungsi Sinkronisasi `sinkron_urutan_kode(...)`
+Fungsi ini membaca kode tertinggi yang telah ada pada tabel data (misal setelah proses seeding, migrasi, atau manual insert). Jika nomor tertinggi di tabel lebih besar dari `nomor_terakhir` pada `urutan_kode`, nilai di `urutan_kode` akan dimajukan secara otomatis sehingga **penomoran tidak akan pernah mundur atau menghasilkan kode duplikat**.
+
+```sql
+CREATE OR REPLACE FUNCTION sinkron_urutan_kode(
+    p_nama_tabel TEXT,
+    p_kolom_kode TEXT,
+    p_prefix TEXT,
+    p_jenis TEXT DEFAULT 'tanpa_reset',
+    p_tanggal DATE DEFAULT CURRENT_DATE
+) RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_kunci TEXT;
+    v_pola_regex TEXT;
+    v_nomor_tertinggi BIGINT := 0;
+    v_nomor_sekarang BIGINT := 0;
+    v_sql TEXT;
+    v_tanggal_str TEXT;
+BEGIN
+    IF p_jenis = 'harian' THEN
+        v_tanggal_str := to_char(p_tanggal, 'YYYYMMDD');
+        v_kunci := p_prefix || '-' || v_tanggal_str;
+        v_pola_regex := '^' || p_prefix || '-' || v_tanggal_str || '-([0-9]+)$';
+    ELSE
+        v_tanggal_str := NULL;
+        v_kunci := p_prefix;
+        v_pola_regex := '^' || p_prefix || '-([0-9]+)$';
+    END IF;
+
+    -- Ambil nomor urut tertinggi yang ada di tabel tujuan menggunakan regex capture
+    v_sql := format(
+        'SELECT COALESCE(MAX((substring(%I from %L))::BIGINT), 0) FROM %I WHERE %I ~ %L',
+        p_kolom_kode, v_pola_regex, p_nama_tabel, p_kolom_kode, v_pola_regex
+    );
+    EXECUTE v_sql INTO v_nomor_tertinggi;
+
+    -- Ambil nomor terakhir saat ini di tabel urutan_kode
+    SELECT nomor_terakhir INTO v_nomor_sekarang
+    FROM urutan_kode
+    WHERE kode = v_kunci;
+
+    -- Sinkronisasi: nomor tidak boleh mundur
+    IF v_nomor_sekarang IS NULL THEN
+        INSERT INTO urutan_kode (kode, prefix, jenis, tanggal, nomor_terakhir, updated_at)
+        VALUES (v_kunci, p_prefix, p_jenis, p_tanggal, v_nomor_tertinggi, now());
+    ELSIF v_nomor_tertinggi > v_nomor_sekarang THEN
+        UPDATE urutan_kode
+        SET nomor_terakhir = v_nomor_tertinggi,
+            updated_at = now()
+        WHERE kode = v_kunci;
+    END IF;
+
+    RETURN GREATEST(COALESCE(v_nomor_sekarang, 0), v_nomor_tertinggi);
+END;
+$$;
+```
+
+#### 4. Trigger Otomatis untuk Kolom `kode`
+Setiap tabel dapat memanfaatkan default trigger `BEFORE INSERT` untuk mengisi kolom `kode` secara otomatis jika tidak disertakan:
+```sql
+CREATE OR REPLACE FUNCTION trg_set_kode_barang()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.kode IS NULL OR NEW.kode = '' THEN
+        NEW.kode := buat_kode('BRG', 4, 'tanpa_reset');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_kode_barang
+BEFORE INSERT ON barang
+FOR EACH ROW EXECUTE FUNCTION trg_set_kode_barang();
+```
+
+---
+
+### 5.4. Supabase Row-Level Security (RLS) Helper Functions
+1. `auth.is_superadmin()`:
+   ```sql
+   CREATE OR REPLACE FUNCTION auth.is_superadmin()
+   RETURNS BOOLEAN AS $$
+   BEGIN
+       RETURN EXISTS (
+           SELECT 1 FROM user_profile
+           WHERE id = auth.uid() AND role = 'superadmin' AND is_aktif = true AND deleted_at IS NULL
+       );
+   END;
+   $$ LANGUAGE plpgsql SECURITY DEFINER;
+   ```
+2. `auth.has_branch_access(target_cabang_id UUID)`:
+   ```sql
+   CREATE OR REPLACE FUNCTION auth.has_branch_access(target_cabang_id UUID)
+   RETURNS BOOLEAN AS $$
+   BEGIN
+       -- Superadmin & HQ Manager memiliki akses lintas cabang
+       IF EXISTS (
+           SELECT 1 FROM user_profile
+           WHERE id = auth.uid() AND role IN ('superadmin', 'hq_manager') AND is_aktif = true AND deleted_at IS NULL
+       ) THEN
+           RETURN true;
+       END IF;
+
+       -- Staf & Manajer Cabang dibatasi pada cabang yang terdaftar di user_cabang
+       RETURN EXISTS (
+           SELECT 1 FROM user_cabang uc
+           JOIN user_profile up ON up.id = uc.user_id
+           WHERE uc.user_id = auth.uid()
+             AND uc.cabang_id = target_cabang_id
+             AND up.is_aktif = true
+             AND uc.deleted_at IS NULL
+             AND up.deleted_at IS NULL
+       );
+   END;
+   $$ LANGUAGE plpgsql SECURITY DEFINER;
+   ```
+3. Filter soft-delete otomatis pada RLS: `deleted_at IS NULL`.
 
 ---
 
 ## 6. Modul Bawaan Template (Starter Reference Modules)
 
 1. **Dashboard Ringkasan (*Overview*)**:
-   - Kartu Metrik KPI (Total Cabang Aktif, Total Nilai Inventaris, Mutasi Pending, Peringatan Stok Minimum).
-   - Grafik distribusi inventaris per cabang & tren mutasi bulanan.
-2. **Manajemen Cabang & Gudang**:
-   - List & Filter data cabang (Tipe: HQ, Cabang, Gudang; Status aktif).
-   - Dialog form Tambah/Ubah Cabang dengan koordinat/alamat dan penanggung jawab.
-3. **Manajemen Pengguna & Penugasan Cabang**:
-   - Daftar staf & administrator dengan badge role dan multi-branch chips.
-   - Form undang/tambah user baru dengan pemilihan cabang default dan multi-cabang.
-4. **Katalog Barang & Inventaris (Multi-Branch)**:
-   - Master item/SKU dengan harga, kategori, dan stok teragregasi.
-   - Detail item dengan rincian stok per masing-masing cabang/gudang.
-5. **Mutasi & Transfer Stok Antar Cabang**:
-   - Alur pengiriman barang dari Gudang A ke Cabang B.
-   - Alur status: *Draft -> Pending Approval -> In Transit -> Received*.
-6. **Audit Trail & Log Aktivitas**:
-   - Pencatatan otomatis riwayat aksi user (waktu, pelaku, cabang, aksi, detail perubahan).
-7. **Pengaturan Organisasi**:
-   - Profil perusahaan, logo, kontak, preferensi format mata uang (IDR/USD), dan switch tema (Light/Dark).
+   - Kartu KPI: Total Cabang Aktif, Nilai Total Stok, Mutasi Berstatus Menunggu, Peringatan Stok Minimum.
+   - Grafik distribusi inventaris per cabang dan riwayat mutasi bulanan.
+2. **Manajemen Cabang & Gudang (`cabang`)**:
+   - Data Table dengan filter tipe (`pusat`, `cabang`, `gudang`) dan status aktif.
+   - Form Tambah/Edit Cabang: Kode otomatis (`CBG-0001`), alamat, kota, telepon, penanggung jawab.
+3. **Manajemen Pengguna & Penugasan (`user_profile` & `user_cabang`)**:
+   - Daftar staf dengan kode pengguna (`USR-0001`), badge role, dan chip multi-cabang.
+   - Dialog undangan/tambah user baru dengan penetapan cabang default dan cabang tambahan.
+4. **Katalog Barang & Inventaris (`barang` & `stok_barang`)**:
+   - Master Barang: Kode (`BRG-0001`), nama, kategori, satuan, harga beli/jual, batas minimum stok.
+   - Rincian Stok Cabang: Menampilkan jumlah fisik, jumlah tersedia, dan jumlah tertahan per cabang aktif.
+5. **Mutasi & Transfer Stok Antar Cabang (`transfer_stok`)**:
+   - Kode mutasi harian (`TRF-20261013-0001`).
+   - Alur status: `draft` -> `menunggu` -> `dalam_pengiriman` -> `diterima` (atau `ditolak`).
+   - Validasi otomatis: Mengurangi `jumlah_tersedia` di cabang asal dan menambah `jumlah` di cabang tujuan saat diterima.
+6. **Log Audit & Jejak Aktivitas (`log_audit`)**:
+   - Kode audit harian (`AUD-20261013-0001`).
+   - Pelacakan otomatis setiap aksi create, update, soft delete, transfer, dan login.
+7. **Pengaturan Organisasi (`organisasi`)**:
+   - Profil entitas perusahaan, logo, kontak, preferensi mata uang (IDR default), dan pengaturan sistem.
 
 ---
 
@@ -230,12 +516,12 @@ zeropoint/
 │   │   ├── (dashboard)/
 │   │   │   ├── layout.tsx             # Shell dashboard (sidebar-07 + header)
 │   │   │   ├── page.tsx               # Overview dashboard
-│   │   │   ├── branches/              # Modul Manajemen Cabang & Gudang
-│   │   │   ├── users/                 # Modul Manajemen User & Hak Akses
-│   │   │   ├── inventory/             # Modul Stok & Master Barang
-│   │   │   ├── transfers/             # Modul Mutasi Antar Cabang
-│   │   │   ├── audit-logs/            # Modul Log Aktivitas
-│   │   │   └── settings/              # Modul Pengaturan Organisasi
+│   │   │   ├── cabang/                # Modul Manajemen Cabang & Gudang
+│   │   │   ├── user/                  # Modul Manajemen User & Hak Akses
+│   │   │   ├── barang/                # Modul Stok & Master Barang
+│   │   │   ├── transfer-stok/         # Modul Mutasi Antar Cabang
+│   │   │   ├── log-audit/             # Modul Log Aktivitas
+│   │   │   └── pengaturan/            # Modul Pengaturan Organisasi
 │   │   ├── api/                       # Webhooks / Auth callbacks
 │   │   ├── globals.css                # Tailwind CSS v4 styling
 │   │   └── layout.tsx
@@ -258,14 +544,15 @@ zeropoint/
 │   │   ├── i18n/                      # Dictionary bahasa (ID / EN)
 │   │   └── utils.ts
 │   ├── server/
-│   │   ├── actions/                   # Server Actions terisolasi (branches, users, items)
+│   │   ├── actions/                   # Server Actions terisolasi (cabang, user, barang, transfer)
 │   │   └── queries/                   # Database queries terisolasi
 │   └── types/
 │       ├── database.types.ts          # Generated types Supabase
 │       └── index.ts
 ├── supabase/
 │   ├── migrations/                    # File migrasi SQL Supabase
-│   └── seed.sql                       # Data inisialisasi awal (Superadmin, demo cabang, dummy item)
+│   │   └── 20261013000000_skema_dasar_multicabang.sql
+│   └── seed.sql                       # Data inisialisasi awal & pemicu sinkronisasi kode
 ├── tests/                             # Vitest unit test
 ├── package.json
 ├── pnpm-lock.yaml
@@ -282,19 +569,22 @@ zeropoint/
    - Pasang blok sidebar: `npx shadcn@latest add sidebar-07`.
    - Pasang komponen UI esensial shadcn: `button`, `dialog`, `dropdown-menu`, `input`, `select`, `table`, `badge`, `card`, `avatar`, `tabs`, `sonner`.
 2. **Tahap 2: Setup Database & Supabase Integration**:
-   - Buat file migrasi `supabase/migrations/20261013000000_init_multibranch_schema.sql` lengkap dengan skema tabel, fungsi RLS, dan triggers.
-   - Buat `supabase/seed.sql` dengan akun demo Superadmin (`admin@zeropoint.com`), cabang HQ, Cabang Surabaya, Gudang Cikarang, dan dummy items.
-   - Konfigurasi `@supabase/ssr` (server, client, middleware) dengan sinkronisasi cookie `zeropoint_active_branch_id`.
+   - Buat file migrasi `supabase/migrations/20261013000000_skema_dasar_multicabang.sql` berisi:
+     - Tabel `urutan_kode`, fungsi `buat_kode`, dan fungsi `sinkron_urutan_kode`.
+     - Tabel `organisasi`, `cabang`, `user_profile`, `user_cabang`, `barang`, `stok_barang`, `transfer_stok`, `log_audit`.
+     - 6 Kolom sistem (`created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by`) dan trigger `updated_at`.
+     - Kebijakan Supabase Row-Level Security (RLS).
+   - Buat `supabase/seed.sql` berisi akun default Superadmin (`admin@zeropoint.com`), cabang demo (`HQ-0001`, `CBG-0001`, `GDG-0001`), master barang dummy, dan eksekusi `sinkron_urutan_kode` di akhir seed.
+   - Konfigurasi `@supabase/ssr` dengan pembacaan cookie `zeropoint_active_branch_id`.
 3. **Tahap 3: Implementasi Shell Dashboard & Branch Switcher**:
-   - Sesuaikan `sidebar-07` dengan memasang `BranchSwitcher` di header sidebar.
-   - Integrasikan `useActiveBranch` dan Server Action untuk mengubah cookie cabang aktif secara instan.
+   - Integrasikan `BranchSwitcher` di header `sidebar-07` dengan sinkronisasi cookie server action.
 4. **Tahap 4: Implementasi Modul-Modul Bawaan**:
-   - CRUD Cabang & Gudang dengan TanStack data-table.
-   - CRUD Pengguna & Penugasan multi-cabang.
-   - Katalog Inventaris & Stok per cabang.
-   - Alur Mutasi/Transfer Stok antar cabang.
-   - Halaman Audit Logs & Settings.
+   - Halaman Cabang & Gudang (`/cabang`)
+   - Halaman Pengguna & Hak Akses (`/user`)
+   - Halaman Inventaris & Stok (`/barang`)
+   - Halaman Mutasi Antar Cabang (`/transfer-stok`)
+   - Halaman Log Audit (`/log-audit`) & Pengaturan (`/pengaturan`)
 5. **Tahap 5: Kualitas & DX**:
-   - Setup konfigurasi Vitest untuk utilitas & branch-scoping logic.
-   - Setup GitHub Actions CI workflow (`.github/workflows/ci.yml`).
-   - Panduan dokumentasi komprehensif di `README.md` cara ekstensi template untuk sistem apa pun.
+   - Unit test generator kode & branch scoping dengan Vitest.
+   - Konfigurasi ESLint & Prettier.
+   - GitHub Actions CI workflow.
