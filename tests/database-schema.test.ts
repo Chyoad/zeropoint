@@ -8,7 +8,6 @@ describe('Supabase Database Schema & Migration Verification', () => {
     process.cwd(),
     'supabase/migrations/20261013000000_skema_produk_dan_kartu_stok.sql'
   )
-  const seedPath = path.resolve(process.cwd(), 'supabase/seed.sql')
 
   it('verifies migration file exists and is non-empty', () => {
     expect(fs.existsSync(migrationPath)).toBe(true)
