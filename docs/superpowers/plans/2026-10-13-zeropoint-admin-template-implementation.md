@@ -348,26 +348,26 @@
 **Interfaces:**
 - Produces: CRUD Produk lengkap dengan 4 tipe produk (`persediaan`, `non_persediaan`, `jasa`, `paket`), multi-satuan fleksibel (`satuan_produk`), komponen paket dinamis (`komponen_paket`), dan pengisian saldo awal per cabang.
 
-- [ ] **Step 1: Tulis unit test validasi produk di `tests/produk-validation.test.ts`**
+- [x] **Step 1: Tulis unit test validasi produk di `tests/produk-validation.test.ts`**
   - Produk persediaan wajib memiliki minimal 1 satuan dasar (`is_satuan_dasar = true`, `rasio_ke_dasar = 1`).
   - Produk paket wajib memiliki minimal 1 komponen penyusun.
   - Kode produk di-generate via `buat_kode('PRD', 4, 'tanpa_reset')`.
 
-- [ ] **Step 2: Implementasikan Server Queries & Actions produk di `src/server/`**
+- [x] **Step 2: Implementasikan Server Queries & Actions produk di `src/server/`**
   - `ambilDaftarProduk(filter)`
   - `ambilDetailProduk(id)` (join `satuan_produk`, `komponen_paket`, `stok_produk`)
   - `simpanProdukAction(payload)`: Transaksi database atomik yang menyimpan data produk, batch insert satuan, komponen paket, dan jika ada saldo awal, otomatis mencatat baris `kartu_stok` dan `stok_produk`.
 
-- [ ] **Step 3: Implementasikan form multi-tab di `src/components/produk/produk-form-tabs.tsx`**
+- [x] **Step 3: Implementasikan form multi-tab di `src/components/produk/produk-form-tabs.tsx`**
   - **Tab 1: Data Dasar**: Nama, Tipe Produk, Kategori, Metode Valuasi (Rata-rata/FIFO), Harga Pokok Standar, Harga Beli Terakhir.
   - **Tab 2: Multi-Satuan (`satuan-repeater.tsx`)**: Tambah/hapus satuan (Satuan Dasar, Satuan 2, Satuan 3), rasio konversi, barcode unik, harga jual default/grosir/member.
   - **Tab 3: Komponen Paket (`komponen-paket-form.tsx`)**: Pemilihan item komponen dan kuantitas (hanya aktif jika tipe = `paket`).
   - **Tab 4: Saldo Awal Cabang (`saldo-awal-cabang-form.tsx`)**: Input kuantitas saldo awal dan harga pokok per cabang (hanya aktif jika tipe = `persediaan` pada form baru).
 
-- [ ] **Step 4: Buat halaman `/produk`, `/produk/baru`, dan `/produk/[id]`**
+- [x] **Step 4: Buat halaman `/produk`, `/produk/baru`, dan `/produk/[id]`**
   Tabel katalog produk dengan filter tipe produk, badge status, dan pencarian.
 
-- [ ] **Step 5: Jalankan test, verifikasi build, dan commit**
+- [x] **Step 5: Jalankan test, verifikasi build, dan commit**
   ```bash
   pnpm vitest run tests/produk-validation.test.ts
   git add src/server/queries/produk.ts src/server/actions/produk.ts src/components/produk/ src/app/\(dashboard\)/produk/ tests/
