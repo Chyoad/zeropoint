@@ -389,7 +389,7 @@
 - Produces: Laporan buku besar mutasi persediaan running balance per cabang dan per produk.
 - Consumes: `kartu_stok`, `stok_produk`, `useActiveBranch`.
 
-- [ ] **Step 1: Tulis unit test running balance di `tests/kartu-stok-calculation.test.ts`**
+- [x] **Step 1: Tulis unit test running balance di `tests/kartu-stok-calculation.test.ts`**
   ```typescript
   import { describe, it, expect } from "vitest";
 
@@ -423,21 +423,21 @@
   });
   ```
 
-- [ ] **Step 2: Jalankan test (PASS)**
+- [x] **Step 2: Jalankan test (PASS)**
   ```bash
   pnpm vitest run tests/kartu-stok-calculation.test.ts
   ```
 
-- [ ] **Step 3: Implementasikan query buku besar di `src/server/queries/kartu-stok.ts`**
+- [x] **Step 3: Implementasikan query buku besar di `src/server/queries/kartu-stok.ts`**
   Query data `kartu_stok` yang memfilter berdasarkan `produk_id`, `cabang_id`, dan rentang tanggal dengan urutan kronologis `tanggal ASC, created_at ASC`.
 
-- [ ] **Step 4: Buat komponen UI `kartu-stok-table.tsx` dan `kartu-stok-filter.tsx`**
+- [x] **Step 4: Buat komponen UI `kartu-stok-table.tsx` dan `kartu-stok-filter.tsx`**
   Tabel buku besar persediaan dengan kolom lengkap: Tanggal, No. Referensi, Tipe Mutasi, Satuan Transaksi, Masuk (Qty), Keluar (Qty), Sisa Qty, Harga Satuan, Total Masuk (Rp), Total Keluar (Rp), Saldo Nilai (Rp), HPP Rata-rata.
 
-- [ ] **Step 5: Buat halaman `src/app/(dashboard)/kartu-stok/page.tsx`**
+- [x] **Step 5: Buat halaman `src/app/(dashboard)/kartu-stok/page.tsx`**
   Integrasi filter produk, cabang, tanggal, dan tombol export CSV/Excel.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   ```bash
   git add src/server/queries/kartu-stok.ts src/components/kartu-stok/ src/app/\(dashboard\)/kartu-stok/ tests/
   git commit -m "feat: implement stock card ledger module with running balance"
