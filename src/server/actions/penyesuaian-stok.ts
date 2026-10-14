@@ -19,8 +19,10 @@ import {
 import {
   demoStokStore,
   demoKartuStokStore,
+  demoSatuanStore,
   withTimeout,
 } from '@/server/queries/produk'
+import { konversiKeSatuanDasar } from '@/lib/konversi-satuan'
 
 export interface ActionResponse<T = unknown> {
   success: boolean
@@ -95,11 +97,19 @@ async function eksekusiMutasiStok(
   }
 
   for (const item of items) {
+    const satuan = item.satuan_produk_id
+      ? demoSatuanStore.find((s) => s.id === item.satuan_produk_id && !s.deleted_at)
+      : null
+    const rasioKeDasar = satuan ? Number(satuan.rasio_ke_dasar) || 1 : 1
+
     const { selisih, totalNilaiSelisih, jenisMutasi } = hitungSelisihOpname(
       item.stok_buku,
       item.stok_fisik,
-      item.harga_satuan
+      item.harga_satuan,
+      rasioKeDasar
     )
+
+    const stokFisikDasar = konversiKeSatuanDasar(item.stok_fisik, rasioKeDasar)
 
     // Update demo store saldo stok_produk
     let demoStok = demoStokStore.find(
@@ -110,10 +120,11 @@ async function eksekusiMutasiStok(
     )
 
     if (demoStok) {
-      demoStok.kuantitas = item.stok_fisik
-      demoStok.kuantitas_tersedia = item.stok_fisik
+      const kuantitasTertahan = Number(demoStok.kuantitas_tertahan) || 0
+      demoStok.kuantitas = stokFisikDasar
+      demoStok.kuantitas_tersedia = Math.max(0, stokFisikDasar - kuantitasTertahan)
       demoStok.total_nilai = parseFloat(
-        (item.stok_fisik * (item.harga_satuan || demoStok.hpp_rata_rata)).toPrecision(12)
+        (stokFisikDasar * (item.harga_satuan || demoStok.hpp_rata_rata)).toPrecision(12)
       )
       demoStok.updated_at = now
     } else {
@@ -122,11 +133,11 @@ async function eksekusiMutasiStok(
         kode: buatKodeStokFallback(),
         cabang_id: header.cabang_id,
         produk_id: item.produk_id,
-        kuantitas: item.stok_fisik,
-        kuantitas_tersedia: item.stok_fisik,
+        kuantitas: stokFisikDasar,
+        kuantitas_tersedia: stokFisikDasar,
         kuantitas_tertahan: 0,
         hpp_rata_rata: item.harga_satuan,
-        total_nilai: parseFloat((item.stok_fisik * item.harga_satuan).toPrecision(12)),
+        total_nilai: parseFloat((stokFisikDasar * item.harga_satuan).toPrecision(12)),
         created_at: now,
         updated_at: now,
         created_by: null,
@@ -143,7 +154,7 @@ async function eksekusiMutasiStok(
         const { data: dbStok } = await withTimeout<any>(
           supabase
             .from('stok_produk')
-            .select('id, hpp_rata_rata')
+            .select('id, hpp_rata_rata, kuantitas_tertahan')
             .eq('cabang_id', header.cabang_id)
             .eq('produk_id', item.produk_id)
             .is('deleted_at', null)
@@ -151,14 +162,15 @@ async function eksekusiMutasiStok(
         )
 
         if (dbStok) {
+          const tertahan = Number(dbStok.kuantitas_tertahan) || 0
           await withTimeout(
             supabase
               .from('stok_produk')
               .update({
-                kuantitas: item.stok_fisik,
-                kuantitas_tersedia: item.stok_fisik,
+                kuantitas: stokFisikDasar,
+                kuantitas_tersedia: Math.max(0, stokFisikDasar - tertahan),
                 total_nilai:
-                  item.stok_fisik * (item.harga_satuan || dbStok.hpp_rata_rata),
+                  stokFisikDasar * (item.harga_satuan || dbStok.hpp_rata_rata),
                 updated_at: now,
               })
               .eq('id', dbStok.id)
@@ -169,11 +181,11 @@ async function eksekusiMutasiStok(
               kode: buatKodeStokFallback(),
               cabang_id: header.cabang_id,
               produk_id: item.produk_id,
-              kuantitas: item.stok_fisik,
-              kuantitas_tersedia: item.stok_fisik,
+              kuantitas: stokFisikDasar,
+              kuantitas_tersedia: stokFisikDasar,
               kuantitas_tertahan: 0,
               hpp_rata_rata: item.harga_satuan,
-              total_nilai: item.stok_fisik * item.harga_satuan,
+              total_nilai: stokFisikDasar * item.harga_satuan,
               created_at: now,
               updated_at: now,
             })
@@ -193,7 +205,7 @@ async function eksekusiMutasiStok(
       const totalNilaiMasuk = selisih > 0 ? totalNilaiSelisih : 0
       const totalNilaiKeluar = selisih < 0 ? Math.abs(totalNilaiSelisih) : 0
       const saldoNilai = parseFloat(
-        (item.stok_fisik * (item.harga_satuan || demoStok.hpp_rata_rata)).toPrecision(12)
+        (stokFisikDasar * (item.harga_satuan || demoStok.hpp_rata_rata)).toPrecision(12)
       )
 
       const kartuStokEntry: KartuStok = {
@@ -206,11 +218,11 @@ async function eksekusiMutasiStok(
         nomor_referensi: header.kode,
         referensi_id: header.id,
         satuan_produk_id: item.satuan_produk_id || null,
-        kuantitas_transaksi: absSelisih,
-        faktor_konversi: 1,
+        kuantitas_transaksi: Math.abs(item.stok_fisik - item.stok_buku),
+        faktor_konversi: rasioKeDasar,
         kuantitas_masuk: kuantitasMasuk,
         kuantitas_keluar: kuantitasKeluar,
-        sisa_kuantitas: item.stok_fisik,
+        sisa_kuantitas: stokFisikDasar,
         harga_satuan: item.harga_satuan,
         total_nilai_masuk: totalNilaiMasuk,
         total_nilai_keluar: totalNilaiKeluar,
@@ -244,11 +256,11 @@ async function eksekusiMutasiStok(
               nomor_referensi: header.kode,
               referensi_id: header.id,
               satuan_produk_id: item.satuan_produk_id || null,
-              kuantitas_transaksi: absSelisih,
-              faktor_konversi: 1,
+              kuantitas_transaksi: Math.abs(item.stok_fisik - item.stok_buku),
+              faktor_konversi: rasioKeDasar,
               kuantitas_masuk: kuantitasMasuk,
               kuantitas_keluar: kuantitasKeluar,
-              sisa_kuantitas: item.stok_fisik,
+              sisa_kuantitas: stokFisikDasar,
               harga_satuan: item.harga_satuan,
               total_nilai_masuk: totalNilaiMasuk,
               total_nilai_keluar: totalNilaiKeluar,
@@ -405,10 +417,16 @@ export async function simpanPenyesuaianStokAction(
 
   // Populate items
   items.forEach((item, index) => {
+    const satuan = item.satuan_produk_id
+      ? demoSatuanStore.find((s) => s.id === item.satuan_produk_id && !s.deleted_at)
+      : null
+    const rasioKeDasar = satuan ? Number(satuan.rasio_ke_dasar) || 1 : 1
+
     const { selisih, totalNilaiSelisih } = hitungSelisihOpname(
       item.stok_buku,
       item.stok_fisik,
-      item.harga_satuan
+      item.harga_satuan,
+      rasioKeDasar
     )
     const itemKode = `${recordHeader.kode}-${String(index + 1).padStart(2, '0')}`
     const itemRecord: PenyesuaianStokItem = {

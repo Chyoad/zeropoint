@@ -98,6 +98,20 @@ describe('Modul Penyesuaian Stok / Stock Opname', () => {
       expect(hasil.totalNilaiSelisih).toBe(0)
       expect(hasil.jenisMutasi).toBe('penyesuaian_masuk')
     })
+
+    it('harus menormalisasi selisih ke satuan dasar jika diberikan rasio konversi > 1', () => {
+      // Misal 1 Karton = 40 Pcs. Stok buku = 2 karton, stok fisik = 3 karton
+      const stokBuku = 2
+      const stokFisik = 3
+      const hargaSatuan = 2500
+      const rasioKeDasar = 40
+
+      const hasil = hitungSelisihOpname(stokBuku, stokFisik, hargaSatuan, rasioKeDasar)
+      // Selisih dalam satuan dasar: (3 * 40) - (2 * 40) = 40 Pcs
+      expect(hasil.selisih).toBe(40)
+      expect(hasil.totalNilaiSelisih).toBe(100000)
+      expect(hasil.jenisMutasi).toBe('penyesuaian_masuk')
+    })
   })
 
   describe('2. Validasi Zod Schema (penyesuaianStokSchema & item)', () => {
@@ -403,6 +417,56 @@ describe('Modul Penyesuaian Stok / Stock Opname', () => {
       const res = await simpanPenyesuaianStokAction(invalidInput)
       expect(res.success).toBe(false)
       expect(res.error).toBeDefined()
+    })
+
+    it('harus menormalisasi kuantitas ke satuan dasar dan mempertahankan kuantitas_tertahan pada kuantitas_tersedia', async () => {
+      const hqId = '10000000-0000-0000-0000-000000000001'
+      const indomieId = '40000000-0000-0000-0000-000000000001'
+      const kartonId = '50000000-0000-0000-0000-000000000002' // Rasio 40
+
+      // Set simulasi stok awal di HQ dengan tertahan 10
+      const stokAwal = demoStokStore.find(
+        (s) => s.cabang_id === hqId && s.produk_id === indomieId
+      )
+      if (stokAwal) {
+        stokAwal.kuantitas_tertahan = 10
+      }
+
+      // Input opname dalam satuan Karton (rasio 40): fisik 6 Karton = 240 Pcs
+      const payload: PenyesuaianStokFormInput = {
+        cabang_id: hqId,
+        tanggal: '2026-10-14T11:00:00.000Z',
+        tipe_penyesuaian: 'opname',
+        status: 'selesai',
+        items: [
+          {
+            produk_id: indomieId,
+            satuan_produk_id: kartonId,
+            stok_buku: 5, // 5 Karton = 200 Pcs
+            stok_fisik: 6, // 6 Karton = 240 Pcs
+            harga_satuan: 2800,
+            alasan: 'Audit fisik 6 karton',
+          },
+        ],
+      }
+
+      const res = await simpanPenyesuaianStokAction(payload)
+      expect(res.success).toBe(true)
+
+      const stokAkhir = demoStokStore.find(
+        (s) => s.cabang_id === hqId && s.produk_id === indomieId
+      )
+      // Kuantitas dasar = 240 Pcs
+      expect(stokAkhir?.kuantitas).toBe(240)
+      // Kuantitas tersedia = 240 - 10 (tertahan) = 230
+      expect(stokAkhir?.kuantitas_tersedia).toBe(230)
+
+      // Kartu stok mencatat faktor konversi 40, kuantitas masuk 40 (dalam satuan dasar), dan sisa dasar 240
+      const mutasi = demoKartuStokStore.find((k) => k.referensi_id === res.data?.id)
+      expect(mutasi).toBeDefined()
+      expect(mutasi?.faktor_konversi).toBe(40)
+      expect(mutasi?.kuantitas_masuk).toBe(40)
+      expect(mutasi?.sisa_kuantitas).toBe(240)
     })
   })
 

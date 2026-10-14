@@ -131,6 +131,24 @@ export function PenyesuaianForm({
 
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isLoadingStokBuku, setIsLoadingStokBuku] = React.useState(false)
+  const [productsInBranch, setProductsInBranch] =
+    React.useState<ProdukStokBuku[]>(availableProducts)
+
+  // Handler saat ganti cabang: sinkronkan daftar produk & stok buku
+  const handleGantiCabang = async (newCabangId: string) => {
+    setCabangId(newCabangId)
+    setItems([]) // Reset items saat cabang berganti
+    if (newCabangId) {
+      try {
+        const res = await muatStokBukuAction(newCabangId)
+        if (res.success && res.data) {
+          setProductsInBranch(res.data)
+        }
+      } catch {
+        // Abaikan error background sync
+      }
+    }
+  }
 
   // Muat Stok Buku Otomatis untuk cabang terpilih
   const handleMuatStokBuku = async () => {
@@ -143,6 +161,7 @@ export function PenyesuaianForm({
     try {
       const res = await muatStokBukuAction(cabangId)
       if (res.success && res.data) {
+        setProductsInBranch(res.data)
         if (res.data.length === 0) {
           toast.info('Tidak ada produk persediaan aktif di cabang ini')
           return
@@ -199,9 +218,9 @@ export function PenyesuaianForm({
     setItems((prev) => prev.filter((_, idx) => idx !== index))
   }
 
-  // Tambah item manual dari dropdown availableProducts
+  // Tambah item manual dari dropdown productsInBranch
   const handleTambahItemManual = (produkId: string) => {
-    const prod = availableProducts.find((p) => p.produk_id === produkId)
+    const prod = productsInBranch.find((p) => p.produk_id === produkId)
     if (!prod) return
 
     // Cek apakah produk sudah ada di tabel
@@ -390,10 +409,7 @@ export function PenyesuaianForm({
             <select
               value={cabangId}
               disabled={isReadOnly || !!initialData}
-              onChange={(e) => {
-                setCabangId(e.target.value)
-                setItems([]) // Reset items saat cabang berganti
-              }}
+              onChange={(e) => handleGantiCabang(e.target.value)}
               className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {cabangList.map((c) => (
@@ -490,7 +506,7 @@ export function PenyesuaianForm({
               </Button>
 
               {/* Tambah Baris Manual (opsional jika ada daftar produk) */}
-              {availableProducts.length > 0 && (
+              {productsInBranch.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   <select
                     defaultValue=""
@@ -505,7 +521,7 @@ export function PenyesuaianForm({
                     <option value="" disabled>
                       + Tambah Produk Manual...
                     </option>
-                    {availableProducts.map((p) => (
+                    {productsInBranch.map((p) => (
                       <option key={p.produk_id} value={p.produk_id}>
                         {p.nama_produk} ({p.kode_produk})
                       </option>
@@ -781,6 +797,21 @@ export function PenyesuaianForm({
 
           {!isReadOnly && (
             <div className="flex flex-wrap items-center gap-2">
+              {/* Tombol Batalkan Opname jika sedang mengedit dokumen draft yang tersimpan */}
+              {initialData?.status === 'draft' && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBatalkanDraft}
+                  disabled={isSubmitting}
+                  className="h-9 gap-1.5 text-xs"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} size={15} strokeWidth={1.5} />
+                  Batalkan Opname
+                </Button>
+              )}
+
               {/* Tombol Simpan Draft */}
               <Button
                 type="button"
@@ -810,39 +841,6 @@ export function PenyesuaianForm({
                 {isSubmitting
                   ? 'Memproses Mutasi...'
                   : 'Selesaikan & Sesuaikan Stok'}
-              </Button>
-            </div>
-          )}
-
-          {/* Jika sedang view draft di halaman detail */}
-          {isReadOnly && initialData?.status === 'draft' && (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={handleBatalkanDraft}
-                disabled={isSubmitting}
-                className="h-9 gap-1.5 text-xs"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={15} strokeWidth={1.5} />
-                Batalkan Opname
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleFinalisasiDraft}
-                disabled={isSubmitting}
-                className="h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              >
-                <HugeiconsIcon
-                  icon={CheckmarkCircle02Icon}
-                  size={15}
-                  strokeWidth={1.5}
-                />
-                {isSubmitting
-                  ? 'Memproses...'
-                  : 'Selesaikan & Sesuaikan Stok Sekarang'}
               </Button>
             </div>
           )}

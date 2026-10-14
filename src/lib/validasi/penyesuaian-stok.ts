@@ -55,6 +55,10 @@ export type PenyesuaianStokInput = z.infer<typeof penyesuaianStokSchema>
 export type PenyesuaianStokFormInput = z.input<typeof penyesuaianStokSchema>
 export type PenyesuaianStokItemInput = z.infer<typeof penyesuaianStokItemSchema>
 
+import { konversiKeSatuanDasar } from '@/lib/konversi-satuan'
+
+export { konversiKeSatuanDasar }
+
 export interface SelisihOpnameResult {
   selisih: number
   totalNilaiSelisih: number
@@ -63,9 +67,12 @@ export interface SelisihOpnameResult {
 
 /**
  * Kalkulasi selisih stok opname, total nilai selisih, dan penentuan jenis mutasi inventaris.
+ * Dinormalisasi ke satuan dasar produk menggunakan rasio konversi satuan.
  *
  * Rumus:
- * - selisih = stok_fisik - stok_buku
+ * - stokBukuDasar = konversiKeSatuanDasar(stokBuku, rasioKeDasar)
+ * - stokFisikDasar = konversiKeSatuanDasar(stokFisik, rasioKeDasar)
+ * - selisih = stokFisikDasar - stokBukuDasar
  * - totalNilaiSelisih = selisih * hargaSatuan
  * - jenisMutasi = 'penyesuaian_masuk' jika selisih > 0,
  *                 'penyesuaian_keluar' jika selisih < 0,
@@ -74,13 +81,18 @@ export interface SelisihOpnameResult {
 export function hitungSelisihOpname(
   stokBuku: number,
   stokFisik: number,
-  hargaSatuan: number = 0
+  hargaSatuan: number = 0,
+  rasioKeDasar: number = 1
 ): SelisihOpnameResult {
   const safeStokBuku = Number(stokBuku) || 0
   const safeStokFisik = Number(stokFisik) || 0
   const safeHarga = Number(hargaSatuan) || 0
+  const safeRasio = Number(rasioKeDasar) > 0 ? Number(rasioKeDasar) : 1
 
-  const selisih = parseFloat((safeStokFisik - safeStokBuku).toPrecision(12))
+  const stokBukuDasar = konversiKeSatuanDasar(safeStokBuku, safeRasio)
+  const stokFisikDasar = konversiKeSatuanDasar(safeStokFisik, safeRasio)
+
+  const selisih = parseFloat((stokFisikDasar - stokBukuDasar).toPrecision(12))
   const totalNilaiSelisih = parseFloat((selisih * safeHarga).toPrecision(12))
 
   let jenisMutasi: 'penyesuaian_masuk' | 'penyesuaian_keluar' | null = null
