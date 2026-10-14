@@ -21,6 +21,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useTheme } from "next-themes"
 import { Badge } from "@/components/ui/badge"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -28,6 +29,8 @@ import {
   UserIcon,
   UserSettings01Icon,
   Logout01Icon,
+  Sun01Icon,
+  Moon02Icon,
 } from "@hugeicons/core-free-icons"
 
 export interface UserNavProps {
@@ -55,6 +58,7 @@ function getInitials(name: string): string {
 
 export function UserNav({ user = DEFAULT_USER }: UserNavProps) {
   const { isMobile } = useSidebar()
+  const { setTheme, resolvedTheme } = useTheme()
   const role = user.role ?? "Superadmin"
   const initials = getInitials(user.name)
 
@@ -150,13 +154,19 @@ export function UserNav({ user = DEFAULT_USER }: UserNavProps) {
                 />
                 <span>Profil Akun</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 cursor-pointer">
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              >
                 <HugeiconsIcon
-                  icon={UserSettings01Icon}
+                  icon={resolvedTheme === "dark" ? Sun01Icon : Moon02Icon}
                   strokeWidth={1.5}
                   className="size-4 shrink-0 text-muted-foreground"
                 />
-                <span>Preferensi & Keamanan</span>
+                <span>Tema: {resolvedTheme === "dark" ? "Beralih ke Terang" : "Beralih ke Gelap"}</span>
+                <span className="ms-auto text-[10px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
+                  D
+                </span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

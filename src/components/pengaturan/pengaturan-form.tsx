@@ -5,6 +5,7 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useTheme } from "next-themes"
 import {
   Building04Icon,
   Coins01Icon,
@@ -14,6 +15,9 @@ import {
   Database01Icon,
   Globe02Icon,
   ShieldUserIcon,
+  Sun01Icon,
+  Moon02Icon,
+  ComputerIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,6 +52,7 @@ export interface PengaturanFormProps {
 export function PengaturanForm({ initialData }: PengaturanFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState("profil")
+  const { theme, setTheme } = useTheme()
 
   const {
     register,
@@ -413,6 +418,64 @@ export function PengaturanForm({ initialData }: PengaturanFormProps) {
                       {watchedPemisahAngka === "titik" ? "Titik (.)" : "Koma (,)"}
                     </strong>
                   </div>
+                </div>
+              </div>
+
+              {/* Preferensi Tema & Tampilan */}
+              <div className="pt-4 border-t border-border/70 space-y-2 mt-4">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <HugeiconsIcon icon={Sun01Icon} size={15} strokeWidth={1.5} className="text-primary" />
+                  Tema & Mode Tampilan Antarmuka
+                </span>
+                <p className="text-[11px] text-muted-foreground">
+                  Pilih skema warna antarmuka yang paling nyaman untuk Anda bekerja.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setTheme("light")}
+                    className={`flex items-center gap-2.5 p-3 rounded-lg border text-xs text-start transition-all cursor-pointer ${
+                      theme === "light"
+                        ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                        : "border-border/70 hover:bg-muted/40 text-muted-foreground"
+                    }`}
+                  >
+                    <HugeiconsIcon icon={Sun01Icon} size={18} strokeWidth={1.5} className="text-amber-500 shrink-0" />
+                    <div>
+                      <strong className="block text-foreground font-medium">Terang (Light)</strong>
+                      <span className="text-[10px] text-muted-foreground">Latar putih & kontras tinggi</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("dark")}
+                    className={`flex items-center gap-2.5 p-3 rounded-lg border text-xs text-start transition-all cursor-pointer ${
+                      theme === "dark"
+                        ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                        : "border-border/70 hover:bg-muted/40 text-muted-foreground"
+                    }`}
+                  >
+                    <HugeiconsIcon icon={Moon02Icon} size={18} strokeWidth={1.5} className="text-primary shrink-0" />
+                    <div>
+                      <strong className="block text-foreground font-medium">Gelap (Dark)</strong>
+                      <span className="text-[10px] text-muted-foreground">Latar gelap & hemat energi</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("system")}
+                    className={`flex items-center gap-2.5 p-3 rounded-lg border text-xs text-start transition-all cursor-pointer ${
+                      theme === "system"
+                        ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                        : "border-border/70 hover:bg-muted/40 text-muted-foreground"
+                    }`}
+                  >
+                    <HugeiconsIcon icon={ComputerIcon} size={18} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                    <div>
+                      <strong className="block text-foreground font-medium">Sistem (Otomatis)</strong>
+                      <span className="text-[10px] text-muted-foreground">Ikuti preferensi OS/perangkat</span>
+                    </div>
+                  </button>
                 </div>
               </div>
             </CardContent>

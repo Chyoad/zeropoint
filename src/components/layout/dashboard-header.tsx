@@ -20,6 +20,7 @@ import {
 } from "@/components/layout/branch-switcher"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Home01Icon } from "@hugeicons/core-free-icons"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 interface RouteInfo {
   parent?: string
@@ -106,6 +107,9 @@ export function DashboardHeader() {
           <BranchTypeBadge tipe={activeBranch.tipe} />
           <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse" title="Cabang Aktif" />
         </div>
+
+        {/* Theme Toggle Button */}
+        <ThemeToggle />
       </div>
     </header>
   )
