@@ -98,6 +98,21 @@ export function getBranchBadgeLabel(tipe: BranchType): string {
   }
 }
 
+export function getShortBranchName(nama: string, tipe: BranchType): string {
+  if (tipe === "konsolidasi") return "Semua Cabang"
+  if (tipe === "pusat") return "Kantor Pusat"
+  return nama
+    .replace(/\s*\((?:HQ|Konsolidasi)\)\s*/gi, "")
+    .replace(/^Gudang Logistik/i, "Gudang")
+    .trim()
+}
+
+export function getShortSubtitle(branch: BranchItem): string {
+  if (branch.tipe === "konsolidasi") return "Semua Fasilitas"
+  const kotaShort = branch.kota ? branch.kota.split(",")[0].trim() : ""
+  return `${branch.kode}${kotaShort ? ` • ${kotaShort}` : ""}`
+}
+
 export function BranchTypeBadge({ tipe }: { tipe: BranchType }) {
   const label = getBranchBadgeLabel(tipe)
   switch (tipe) {
@@ -201,13 +216,15 @@ export function BranchSwitcher({ branches = DEMO_BRANCHES }: BranchSwitcherProps
                 className="truncate font-semibold text-sm leading-tight text-foreground"
                 title={activeBranch.nama}
               >
-                {activeBranch.nama}
+                <span className="sr-only">{activeBranch.nama}</span>
+                <span aria-hidden="true">
+                  {getShortBranchName(activeBranch.nama, activeBranch.tipe)}
+                </span>
               </span>
               <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground text-xs leading-none min-w-0">
                 <BranchTypeBadge tipe={activeBranch.tipe} />
                 <span className="truncate">
-                  {activeBranch.kode}
-                  {activeBranch.kota ? ` • ${activeBranch.kota}` : ""}
+                  {getShortSubtitle(activeBranch)}
                   {isPending ? " (Memperbarui...)" : ""}
                 </span>
               </div>
