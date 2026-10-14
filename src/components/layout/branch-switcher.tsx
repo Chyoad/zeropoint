@@ -189,23 +189,28 @@ export function BranchSwitcher({ branches = DEMO_BRANCHES }: BranchSwitcherProps
               />
             }
           >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs shrink-0">
               <HugeiconsIcon
                 icon={activeIcon}
                 strokeWidth={1.5}
                 className="size-4 shrink-0"
               />
             </div>
-            <div className="grid flex-1 text-start text-sm leading-tight">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate font-semibold">{activeBranch.nama}</span>
-                <BranchTypeBadge tipe={activeBranch.tipe} />
-              </div>
-              <span className="truncate text-xs text-muted-foreground">
-                {activeBranch.kode}
-                {activeBranch.kota ? ` • ${activeBranch.kota}` : ""}
-                {isPending ? " (Memperbarui...)" : ""}
+            <div className="flex flex-1 flex-col text-start min-w-0">
+              <span
+                className="truncate font-semibold text-sm leading-tight text-foreground"
+                title={activeBranch.nama}
+              >
+                {activeBranch.nama}
               </span>
+              <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground text-xs leading-none min-w-0">
+                <BranchTypeBadge tipe={activeBranch.tipe} />
+                <span className="truncate">
+                  {activeBranch.kode}
+                  {activeBranch.kota ? ` • ${activeBranch.kota}` : ""}
+                  {isPending ? " (Memperbarui...)" : ""}
+                </span>
+              </div>
             </div>
             <HugeiconsIcon
               icon={UnfoldMoreIcon}

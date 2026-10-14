@@ -101,7 +101,10 @@ export function DashboardHeader() {
           <div className="flex size-4 items-center justify-center text-primary">
             <HugeiconsIcon icon={BranchIcon} strokeWidth={1.5} className="size-3.5" />
           </div>
-          <span className="font-medium text-foreground max-w-[140px] truncate md:max-w-none">
+          <span
+            className="font-medium text-foreground max-w-[220px] truncate sm:max-w-[260px] md:max-w-none"
+            title={activeBranch.nama}
+          >
             {activeBranch.nama}
           </span>
           <BranchTypeBadge tipe={activeBranch.tipe} />
