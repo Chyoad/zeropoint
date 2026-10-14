@@ -493,22 +493,22 @@
 **Interfaces:**
 - Produces: Halaman log audit, halaman pengaturan profil perusahaan & preferensi, automated GitHub Actions CI, dan dokumentasi komprehensif.
 
-- [ ] **Step 1: Buat halaman `src/app/(dashboard)/log-audit/page.tsx`**
+- [x] **Step 1: Buat halaman `src/app/(dashboard)/log-audit/page.tsx`**
   Tabel riwayat aktivitas pengguna (Waktu, Cabang, Pelaku, Aksi, Entitas, Rincian Perubahan JSON).
 
-- [ ] **Step 2: Buat halaman `src/app/(dashboard)/pengaturan/page.tsx`**
+- [x] **Step 2: Buat halaman `src/app/(dashboard)/pengaturan/page.tsx`**
   Form pengaturan profil organisasi, logo perusahaan, preferensi mata uang (IDR), dan toggle tema Dark/Light.
 
-- [ ] **Step 3: Buat GitHub Actions CI di `.github/workflows/ci.yml`**
+- [x] **Step 3: Buat GitHub Actions CI di `.github/workflows/ci.yml`**
   Workflow otomatis untuk branch `main`: install pnpm, install dependencies, run linter, run typecheck (`tsc --noEmit`), run vitest tests, dan run `pnpm build`.
 
-- [ ] **Step 4: Tulis dokumentasi komprehensif di `README.md`**
+- [x] **Step 4: Tulis dokumentasi komprehensif di `README.md`**
   - Arsitektur proyek & standar penamaan tabel/kolom.
   - Cara setup lokal dengan Supabase CLI / Cloud.
   - Alur multi-satuan dan kartu stok.
   - Panduan menambahkan modul baru berbasis template ini.
 
-- [ ] **Step 5: Verifikasi akhir seluruh linting, typecheck, dan build**
+- [x] **Step 5: Verifikasi akhir seluruh linting, typecheck, dan build**
   ```bash
   pnpm vitest run
   pnpm build
