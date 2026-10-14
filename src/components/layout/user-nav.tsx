@@ -90,19 +90,12 @@ export function UserNav({ user = DEFAULT_USER }: UserNavProps) {
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="grid flex-1 text-start text-sm leading-tight">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate font-semibold">{user.name}</span>
-                <Badge
-                  variant="outline"
-                  className="h-4 px-1 py-0 text-[10px] font-medium border-primary/30 bg-primary/5 text-primary"
-                >
-                  {role}
-                </Badge>
-              </div>
+            <div className="grid flex-1 text-start text-sm leading-tight min-w-0">
+              <span className="truncate font-semibold">{user.name}</span>
               <span className="truncate text-xs text-muted-foreground">
                 {user.email}
               </span>
+              <span className="sr-only">{role}</span>
             </div>
             <HugeiconsIcon
               icon={UnfoldMoreIcon}

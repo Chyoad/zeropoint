@@ -108,9 +108,13 @@ export function getShortBranchName(nama: string, tipe: BranchType): string {
 }
 
 export function getShortSubtitle(branch: BranchItem): string {
-  if (branch.tipe === "konsolidasi") return "Semua Fasilitas"
-  const kotaShort = branch.kota ? branch.kota.split(",")[0].trim() : ""
-  return `${branch.kode}${kotaShort ? ` • ${kotaShort}` : ""}`
+  if (branch.tipe === "konsolidasi") return "Konsolidasi"
+  const kotaShort = branch.kota
+    ? branch.kota.startsWith("Jakarta")
+      ? "Jakarta"
+      : branch.kota.split(",")[0].trim()
+    : ""
+  return kotaShort ? `${branch.kode} • ${kotaShort}` : branch.kode
 }
 
 export function BranchTypeBadge({ tipe }: { tipe: BranchType }) {
@@ -221,13 +225,14 @@ export function BranchSwitcher({ branches = DEMO_BRANCHES }: BranchSwitcherProps
                   {getShortBranchName(activeBranch.nama, activeBranch.tipe)}
                 </span>
               </span>
-              <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground text-xs leading-none min-w-0">
-                <BranchTypeBadge tipe={activeBranch.tipe} />
-                <span className="truncate">
-                  {getShortSubtitle(activeBranch)}
-                  {isPending ? " (Memperbarui...)" : ""}
+              <span className="truncate text-xs text-muted-foreground mt-0.5">
+                <span className="sr-only">
+                  {activeBranch.kode}
+                  {activeBranch.kota ? ` • ${activeBranch.kota}` : ""}
                 </span>
-              </div>
+                <span aria-hidden="true">{getShortSubtitle(activeBranch)}</span>
+                {isPending ? " (Memperbarui...)" : ""}
+              </span>
             </div>
             <HugeiconsIcon
               icon={UnfoldMoreIcon}
