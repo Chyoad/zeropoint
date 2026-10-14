@@ -104,6 +104,8 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
 ]
 
 export function AppSidebar({
+  variant = "floating",
+  collapsible = "icon",
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
@@ -119,7 +121,7 @@ export function AppSidebar({
   )
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar variant={variant} collapsible={collapsible} {...props}>
       <SidebarHeader>
         <BranchSwitcher />
       </SidebarHeader>
