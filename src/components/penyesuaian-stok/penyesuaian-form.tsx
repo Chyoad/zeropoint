@@ -569,7 +569,7 @@ export function PenyesuaianForm({
                         <p className="text-[11px] text-muted-foreground">
                           Klik tombol{' '}
                           <span className="font-semibold text-primary">
-                            "Muat Stok Buku Otomatis"
+                            &ldquo;Muat Stok Buku Otomatis&rdquo;
                           </span>{' '}
                           di atas untuk mengisi daftar barang dari cabang terpilih.
                         </p>

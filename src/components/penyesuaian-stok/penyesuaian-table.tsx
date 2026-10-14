@@ -59,12 +59,13 @@ export function PenyesuaianTable({
     activeBranchId || 'all'
   )
 
-  // Sinkronisasi saat activeBranchId berubah dari switcher
-  React.useEffect(() => {
+  const [prevBranchId, setPrevBranchId] = React.useState(activeBranchId)
+  if (activeBranchId !== prevBranchId) {
+    setPrevBranchId(activeBranchId)
     if (activeBranchId) {
       setCabangFilter(activeBranchId)
     }
-  }, [activeBranchId])
+  }
 
   // Filter data secara reaktif di client
   const filteredData = React.useMemo(() => {

@@ -349,6 +349,20 @@ describe('Cabang Server Actions (simpanCabangAction & hapusCabangAction)', () =>
     const foundById = await ambilCabangById(targetId)
     expect(foundById).toBeNull()
   })
+
+  it('should block deletion of branches with type pusat (HQ protection)', async () => {
+    const hqId = '10000000-0000-0000-0000-000000000001' // Kantor Pusat Jakarta (HQ)
+
+    const deleteRes = await hapusCabangAction(hqId)
+    expect(deleteRes.success).toBe(false)
+    expect(deleteRes.error).toBe('Cabang kantor pusat tidak dapat dihapus')
+
+    // Confirm HQ is still in active listing
+    const daftar = await ambilDaftarCabang()
+    const foundInList = daftar.find((c) => c.id === hqId)
+    expect(foundInList).toBeDefined()
+    expect(foundInList?.tipe).toBe('pusat')
+  })
 })
 
 describe('Zero Lucide Icons Verification in Cabang Module', () => {

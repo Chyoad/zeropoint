@@ -76,10 +76,11 @@ export function CabangTable({ initialData }: CabangTableProps) {
   const [cabangToDelete, setCabangToDelete] = React.useState<Cabang | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  // Sinkronkan state jika initialData berubah
-  React.useEffect(() => {
+  const [prevInitialData, setPrevInitialData] = React.useState(initialData)
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData)
     setData(initialData)
-  }, [initialData])
+  }
 
   // Filter client-side
   const filteredData = React.useMemo(() => {

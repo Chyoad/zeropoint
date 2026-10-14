@@ -106,10 +106,11 @@ export function ProdukTable({ initialData, daftarKategori }: ProdukTableProps) {
   const [produkToDelete, setProdukToDelete] = React.useState<ProdukWithRelations | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  // Sinkronkan state lokal jika initialData berubah
-  React.useEffect(() => {
+  const [prevInitialData, setPrevInitialData] = React.useState(initialData)
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData)
     setData(initialData)
-  }, [initialData])
+  }
 
   // Filter Data
   const filteredData = React.useMemo(() => {

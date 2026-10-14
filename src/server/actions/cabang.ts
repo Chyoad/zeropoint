@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import {
   cabangSchema,
-  type CabangInput,
   type CabangFormInput,
 } from '@/lib/validasi/cabang'
 import {
@@ -261,8 +260,30 @@ export async function hapusCabangAction(
     return { success: false, error: 'ID cabang wajib disertakan.' }
   }
 
+  // Cegah penghapusan kantor pusat pada in-memory demo store
+  const demoTarget = demoCabangStore.find((c) => c.id === id)
+  if (demoTarget?.tipe === 'pusat') {
+    return {
+      success: false,
+      error: 'Cabang kantor pusat tidak dapat dihapus',
+    }
+  }
+
   try {
     const supabase = await createClient()
+
+    // Cek apakah cabang bertipe pusat di Supabase
+    const { data: targetCabang, error: checkError } = await withTimeout(
+      supabase.from('cabang').select('tipe').eq('id', id).maybeSingle()
+    )
+
+    if (!checkError && targetCabang?.tipe === 'pusat') {
+      return {
+        success: false,
+        error: 'Cabang kantor pusat tidak dapat dihapus',
+      }
+    }
+
     const now = new Date().toISOString()
 
     const { error: deleteError } = await withTimeout(

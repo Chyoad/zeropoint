@@ -3,7 +3,6 @@ import fs from 'fs'
 import path from 'path'
 import {
   profilOrganisasiSchema,
-  INITIAL_DEMO_ORGANISASI,
   type ProfilOrganisasiFormInput,
 } from '@/lib/validasi/pengaturan'
 import {
@@ -11,7 +10,6 @@ import {
   resetDemoLogAudit,
   tambahDemoLogAudit,
   formatBadgeAksi,
-  demoLogAuditStore,
 } from '@/server/queries/log-audit'
 import {
   ambilProfilOrganisasi,
@@ -155,6 +153,23 @@ describe('Task 11: Log Audit & Pengaturan Organisasi Suite', () => {
       const logsAfterReset = await ambilDaftarLogAudit({ search: 'LOG-TEST-0001' })
       expect(logsAfterReset.length).toBe(0)
     })
+
+    it('harus mengembalikan array kosong jika query Supabase sukses dengan 0 baris (tidak fallback ke demo store)', async () => {
+      const { createClient } = await import('@/lib/supabase/server')
+      const mockSelect = vi.fn().mockReturnThis()
+      const mockOrder = vi.fn().mockResolvedValue({ data: [], error: null })
+      const mockFrom = vi.fn().mockReturnValue({
+        select: mockSelect,
+        order: mockOrder,
+      })
+
+      vi.mocked(createClient).mockResolvedValueOnce({
+        from: mockFrom,
+      } as any)
+
+      const result = await ambilDaftarLogAudit()
+      expect(result).toEqual([])
+    })
   })
 
   describe('2. Helper Format Badge Aksi (formatBadgeAksi)', () => {
@@ -293,6 +308,66 @@ describe('Task 11: Log Audit & Pengaturan Organisasi Suite', () => {
       expect(res.error).toBeDefined()
       expect(res.error).toContain('Validasi profil organisasi gagal')
     })
+
+    it('harus memanggil insert ke tabel log_audit di Supabase saat update profil organisasi berhasil', async () => {
+      const { createClient } = await import('@/lib/supabase/server')
+      const mockLogInsert = vi.fn().mockResolvedValue({ error: null })
+      const mockOrgUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: '00000000-0000-0000-0000-000000000001',
+                kode: 'ORG-0001',
+                nama: 'PT Supabase Persisted Corp',
+                logo_url: null,
+                updated_at: new Date().toISOString(),
+              },
+              error: null,
+            }),
+          }),
+        }),
+      })
+
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'organisasi') {
+          return { update: mockOrgUpdate }
+        }
+        if (table === 'log_audit') {
+          return { insert: mockLogInsert }
+        }
+        return {}
+      })
+
+      vi.mocked(createClient).mockResolvedValueOnce({
+        from: mockFrom,
+      } as any)
+
+      const res = await perbaruiProfilOrganisasiAction({
+        id: demoOrganisasiStore.id,
+        kode: 'ORG-0001',
+        nama: 'PT Supabase Persisted Corp',
+        npwp: '01.234.567.8-999.000',
+        alamat: 'Menara Mandiri Lt. 30, Jl. Jend. Sudirman',
+        kota: 'Jakarta Selatan',
+        provinsi: 'DKI Jakarta',
+        telepon: '021-8889999',
+        email: 'official@zeropoint.local',
+        mata_uang_default: 'IDR',
+        zona_waktu: 'Asia/Jakarta (WIB)',
+        pemisah_angka: 'titik',
+        format_tanggal: 'DD/MM/YYYY',
+      })
+
+      expect(res.success).toBe(true)
+      expect(mockLogInsert).toHaveBeenCalledTimes(1)
+      expect(mockLogInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tabel_nama: 'organisasi',
+          aksi: 'UPDATE',
+        })
+      )
+    })
   })
 
   describe('4. Verifikasi Struktur File CI/CD Workflow (.github/workflows/ci.yml)', () => {
@@ -313,6 +388,7 @@ describe('Task 11: Log Audit & Pengaturan Organisasi Suite', () => {
       expect(ciContent).toContain('node-version: 20')
       expect(ciContent).toContain("cache: 'pnpm'")
       expect(ciContent).toContain('pnpm install')
+      expect(ciContent).toContain('pnpm lint')
       expect(ciContent).toContain('pnpm typecheck')
       expect(ciContent).toContain('pnpm test')
       expect(ciContent).toContain('pnpm build')

@@ -83,10 +83,36 @@ export async function perbaruiProfilOrganisasiAction(
         updated_at: updatedSupabase.updated_at,
       }
 
-      // Log audit
+      const logKode = `LOG-${Date.now().toString().slice(-8)}`
+      const nowIso = new Date().toISOString()
+
+      // Insert audit record ke Supabase
+      try {
+        await withTimeout(
+          supabase.from('log_audit').insert({
+            kode: logKode,
+            organisasi_id: targetId,
+            cabang_id: null,
+            user_id: null,
+            tabel_nama: 'organisasi',
+            record_id: targetId,
+            aksi: 'UPDATE',
+            data_lama: { nama: demoOrganisasiStore.nama, email: demoOrganisasiStore.email },
+            data_baru: { nama: validData.nama, email: validData.email },
+            ip_address: '127.0.0.1',
+            user_agent: 'Zeropoint-App/1.0',
+            created_at: nowIso,
+            updated_at: nowIso,
+          })
+        )
+      } catch {
+        // Abaikan jika insert audit ke Supabase gagal agar flow utama tetap sukses
+      }
+
+      // Log audit demo store
       tambahDemoLogAudit({
         id: crypto.randomUUID(),
-        kode: `LOG-${Date.now().toString().slice(-8)}`,
+        kode: logKode,
         organisasi_id: targetId,
         cabang_id: null,
         cabang_nama: 'Kantor Pusat Jakarta (HQ)',
@@ -101,7 +127,7 @@ export async function perbaruiProfilOrganisasiAction(
         data_baru: { nama: validData.nama, email: validData.email },
         deskripsi: `Memperbarui profil organisasi ${validData.nama}`,
         ip_address: '127.0.0.1',
-        created_at: new Date().toISOString(),
+        created_at: nowIso,
       })
 
       revalidatePath('/pengaturan')

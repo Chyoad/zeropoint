@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Database } from '@/types/database.types'
 import {
   type LogAudit,
   type OpsiFilterLogAudit,
@@ -358,29 +357,29 @@ export async function ambilDaftarLogAudit(
 
     const { data, error } = await withTimeout(query)
 
-    if (error || !data || data.length === 0) {
+    if (error || !data) {
       return filterDemoLogs(demoLogAuditStore, filter)
     }
 
-    const mapped = (data as Array<any>).map((row) => ({
-      id: row.id,
-      kode: row.kode,
-      organisasi_id: row.organisasi_id,
-      cabang_id: row.cabang_id,
-      cabang_nama: row.cabang?.nama || null,
-      user_id: row.user_id,
+    const mapped = (data as Array<Record<string, unknown>>).map((row) => ({
+      id: row.id as string,
+      kode: row.kode as string,
+      organisasi_id: (row.organisasi_id as string) || null,
+      cabang_id: (row.cabang_id as string) || null,
+      cabang_nama: ((row.cabang as { nama?: string } | null)?.nama) || null,
+      user_id: (row.user_id as string) || null,
       user_nama: null,
-      aksi: row.aksi,
-      entitas: row.tabel_nama,
-      entitas_id: row.record_id,
-      tabel_nama: row.tabel_nama,
-      record_id: row.record_id,
+      aksi: row.aksi as LogAudit['aksi'],
+      entitas: row.tabel_nama as string,
+      entitas_id: (row.record_id as string) || null,
+      tabel_nama: row.tabel_nama as string,
+      record_id: (row.record_id as string) || null,
       data_lama: (row.data_lama as Record<string, unknown>) || null,
       data_baru: (row.data_baru as Record<string, unknown>) || null,
       deskripsi: null,
-      ip_address: row.ip_address,
-      user_agent: row.user_agent,
-      created_at: row.created_at,
+      ip_address: (row.ip_address as string) || null,
+      user_agent: (row.user_agent as string) || null,
+      created_at: row.created_at as string,
     }))
 
     return filterDemoLogs(mapped, filter)

@@ -79,31 +79,23 @@ export function KartuStokFilter({
 
   const [isPending, startTransition] = React.useTransition()
 
-  // Sinkronkan state lokal saat parameter URL atau initialFilters berubah
-  React.useEffect(() => {
-    setCabangId(
-      searchParams.get('cabang_id') ?? initialFilters.cabang_id ?? 'all'
-    )
-    setProdukId(
-      searchParams.get('produk_id') ?? initialFilters.produk_id ?? 'all'
-    )
-    setJenisMutasi(
-      searchParams.get('jenis_mutasi') ?? initialFilters.jenis_mutasi ?? 'all'
-    )
-    setTanggalMulai(
-      searchParams.get('tanggal_mulai') ?? initialFilters.tanggal_mulai ?? ''
-    )
-    setTanggalSelesai(
-      searchParams.get('tanggal_selesai') ?? initialFilters.tanggal_selesai ?? ''
-    )
-  }, [
-    searchParams,
-    initialFilters.cabang_id,
-    initialFilters.produk_id,
-    initialFilters.jenis_mutasi,
-    initialFilters.tanggal_mulai,
-    initialFilters.tanggal_selesai,
-  ])
+  const searchCabang = searchParams.get('cabang_id') ?? initialFilters.cabang_id ?? 'all'
+  const searchProduk = searchParams.get('produk_id') ?? initialFilters.produk_id ?? 'all'
+  const searchJenis = searchParams.get('jenis_mutasi') ?? initialFilters.jenis_mutasi ?? 'all'
+  const searchMulai = searchParams.get('tanggal_mulai') ?? initialFilters.tanggal_mulai ?? ''
+  const searchSelesai = searchParams.get('tanggal_selesai') ?? initialFilters.tanggal_selesai ?? ''
+
+  const currentParamsKey = `${searchCabang}|${searchProduk}|${searchJenis}|${searchMulai}|${searchSelesai}`
+  const [prevParamsKey, setPrevParamsKey] = React.useState(currentParamsKey)
+
+  if (currentParamsKey !== prevParamsKey) {
+    setPrevParamsKey(currentParamsKey)
+    setCabangId(searchCabang)
+    setProdukId(searchProduk)
+    setJenisMutasi(searchJenis)
+    setTanggalMulai(searchMulai)
+    setTanggalSelesai(searchSelesai)
+  }
 
   const handleApplyFilter = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
