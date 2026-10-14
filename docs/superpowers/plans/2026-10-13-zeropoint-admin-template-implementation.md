@@ -459,20 +459,20 @@
 **Interfaces:**
 - Produces: Transaksi stock opname/penyesuaian stok yang mengoreksi saldo `stok_produk` dan meng-generate baris mutasi `kartu_stok` (`penyesuaian_masuk` / `penyesuaian_keluar`).
 
-- [ ] **Step 1: Tulis test kalkulasi selisih opname di `tests/penyesuaian-stok.test.ts`**
+- [x] **Step 1: Tulis test kalkulasi selisih opname di `tests/penyesuaian-stok.test.ts`**
   Uji penghitungan `selisih = stok_fisik - stok_buku` dan penentuan jenis mutasi.
 
-- [ ] **Step 2: Implementasikan Server Actions di `src/server/actions/penyesuaian-stok.ts`**
+- [x] **Step 2: Implementasikan Server Actions di `src/server/actions/penyesuaian-stok.ts`**
   - Buat kode transaksi via `buat_kode('ADJ', 4, 'harian')`.
   - Simpan header `penyesuaian_stok` dan rincian `penyesuaian_stok_item`.
   - Saat status = `selesai`, lakukan pembaruan atomik:
     - Update `stok_produk.kuantitas` ke nilai stok fisik.
     - Catat baris baru di `kartu_stok` untuk setiap item yang berselisih.
 
-- [ ] **Step 3: Buat komponen dan halaman form input Stock Opname**
+- [x] **Step 3: Buat komponen dan halaman form input Stock Opname**
   Halaman pemilihan cabang, pemuatan daftar produk dan stok buku otomatis, serta input stok fisik dengan indikator warna selisih (hijau jika lebih, merah jika kurang).
 
-- [ ] **Step 4: Jalankan test, verifikasi build, dan commit**
+- [x] **Step 4: Jalankan test, verifikasi build, dan commit**
   ```bash
   pnpm vitest run tests/penyesuaian-stok.test.ts
   git add src/server/queries/penyesuaian-stok.ts src/server/actions/penyesuaian-stok.ts src/components/penyesuaian-stok/ src/app/\(dashboard\)/penyesuaian-stok/ tests/
