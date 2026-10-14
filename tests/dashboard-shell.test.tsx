@@ -31,6 +31,7 @@ vi.mock("@/hooks/use-active-branch", () => ({
     isAllBranches: false,
     isPending: false,
   }),
+  ActiveBranchProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 describe("Task 5: Dashboard Shell & Hugeicons Migration", () => {

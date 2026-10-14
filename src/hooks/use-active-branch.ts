@@ -1,6 +1,13 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useTransition,
+  useCallback,
+  type ReactNode,
+} from 'react'
 import {
   ACTIVE_BRANCH_COOKIE,
   isValidBranchId,
@@ -18,44 +25,36 @@ export interface UseActiveBranchReturn {
   isPending: boolean
 }
 
-function getClientCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(
-    new RegExp('(?:^|;\\s*)' + name + '=([^;]*)')
-  )
-  return match ? decodeURIComponent(match[1]) : null
-}
-
 function setClientCookie(name: string, value: string, days = 30) {
   if (typeof document === 'undefined') return
   const maxAge = days * 24 * 60 * 60
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`
 }
 
-export function useActiveBranch(
-  options?: UseActiveBranchOptions
-): UseActiveBranchReturn {
-  const [activeBranchId, setActiveBranchIdState] = useState<string | null>(
-    () => {
-      if (options?.initialBranchId !== undefined) {
-        return isValidBranchId(options.initialBranchId)
-          ? options.initialBranchId
-          : null
-      }
-      const cookieVal = getClientCookie(ACTIVE_BRANCH_COOKIE)
-      return isValidBranchId(cookieVal) ? cookieVal : null
-    }
+const ActiveBranchContext = createContext<UseActiveBranchReturn | null>(null)
+
+export interface ActiveBranchProviderProps {
+  initialBranchId?: string | null
+  children: ReactNode
+}
+
+export function ActiveBranchProvider({
+  initialBranchId,
+  children,
+}: ActiveBranchProviderProps) {
+  const [activeBranchId, setActiveBranchIdState] = useState<string | null>(() =>
+    isValidBranchId(initialBranchId) ? initialBranchId : null
   )
 
   const [prevInitialBranchId, setPrevInitialBranchId] = useState(
-    options?.initialBranchId
+    initialBranchId
   )
 
   // Adjust state during render when initialBranchId prop changes
-  if (options?.initialBranchId !== prevInitialBranchId) {
-    setPrevInitialBranchId(options?.initialBranchId)
+  if (initialBranchId !== prevInitialBranchId) {
+    setPrevInitialBranchId(initialBranchId)
     setActiveBranchIdState(
-      isValidBranchId(options?.initialBranchId) ? options.initialBranchId : null
+      isValidBranchId(initialBranchId) ? initialBranchId : null
     )
   }
 
@@ -69,11 +68,9 @@ export function useActiveBranch(
         )
       }
 
-      // Update state client secara optimistik dan tulis cookie client
       setActiveBranchIdState(branchId)
       setClientCookie(ACTIVE_BRANCH_COOKIE, branchId)
 
-      // Jalankan server action dalam transisi React
       await new Promise<void>((resolve, reject) => {
         startTransition(async () => {
           try {
@@ -88,12 +85,71 @@ export function useActiveBranch(
     [startTransition]
   )
 
-  const isAllBranches = activeBranchId === 'all'
-
-  return {
+  const value: UseActiveBranchReturn = {
     activeBranchId,
     setActiveBranch,
-    isAllBranches,
+    isAllBranches: activeBranchId === 'all',
     isPending,
+  }
+
+  return React.createElement(
+    ActiveBranchContext.Provider,
+    { value },
+    children
+  )
+}
+
+export function useActiveBranch(
+  options?: UseActiveBranchOptions
+): UseActiveBranchReturn {
+  const context = useContext(ActiveBranchContext)
+
+  const [localBranchId, setLocalBranchId] = useState<string | null>(() =>
+    isValidBranchId(options?.initialBranchId) ? options.initialBranchId : null
+  )
+  const [prevInitial, setPrevInitial] = useState(options?.initialBranchId)
+
+  if (options?.initialBranchId !== prevInitial) {
+    setPrevInitial(options?.initialBranchId)
+    setLocalBranchId(
+      isValidBranchId(options?.initialBranchId) ? options.initialBranchId : null
+    )
+  }
+
+  const [localPending, startLocalTransition] = useTransition()
+
+  const localSetActiveBranch = useCallback(
+    async (branchId: string | 'all') => {
+      if (!isValidBranchId(branchId)) {
+        throw new Error(
+          `ID Cabang tidak valid: format harus UUID atau "all". Diterima: ${String(branchId)}`
+        )
+      }
+      setLocalBranchId(branchId)
+      setClientCookie(ACTIVE_BRANCH_COOKIE, branchId)
+
+      await new Promise<void>((resolve, reject) => {
+        startLocalTransition(async () => {
+          try {
+            await setActiveBranchAction(branchId)
+            resolve()
+          } catch (err) {
+            reject(err)
+          }
+        })
+      })
+    },
+    [startLocalTransition]
+  )
+
+  if (context && options?.initialBranchId === undefined) {
+    return context
+  }
+
+  return {
+    activeBranchId: localBranchId,
+    setActiveBranch: localSetActiveBranch,
+    isAllBranches: localBranchId === 'all',
+    isPending: localPending,
   }
 }
